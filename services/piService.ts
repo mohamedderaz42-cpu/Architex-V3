@@ -1,5 +1,5 @@
 
-import { PAYMENT_CONFIG } from "../constants";
+import { PAYMENT_CONFIG, CONTRACT_CONFIG } from "../constants";
 
 export interface PaymentCallbacks {
   onReadyForServerApproval: (paymentId: string) => Promise<void>;
@@ -48,6 +48,28 @@ class PiService {
         type: 'SERVICE_FEE',
         destination: PAYMENT_CONFIG.treasuryWallet,
         enforced: true
+    };
+
+    await this.processPayment(amount, memo, routingMetadata, callbacks);
+  }
+
+  /**
+   * MARKETPLACE REVENUE ROUTING
+   * Strictly enforces routing to the Smart Contract Escrow Vault.
+   * Used for: Bounty Deposits and Marketplace Buy/Sell Operations.
+   */
+  async createEscrowPayment(memo: string, amount: number, callbacks: PaymentCallbacks): Promise<void> {
+    await this.init();
+    
+    console.log(`[PiService] 🔒 MARKETPLACE ROUTING: Initiating Escrow Transfer`);
+    console.log(`[PiService] ➡️ DESTINATION: ${CONTRACT_CONFIG.ESCROW_WALLET} (Smart Contract Vault)`);
+    console.log(`[PiService] 💰 AMOUNT: ${amount} Pi`);
+
+    const routingMetadata = {
+        type: 'MARKETPLACE_ESCROW',
+        destination: CONTRACT_CONFIG.ESCROW_WALLET,
+        enforced: true,
+        contractType: 'BOUNTY_V1'
     };
 
     await this.processPayment(amount, memo, routingMetadata, callbacks);

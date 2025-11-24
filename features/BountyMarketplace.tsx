@@ -42,9 +42,9 @@ export const BountyMarketplace: React.FC = () => {
     setIsCreating(true);
     const priceVal = parseFloat(formPrice);
 
-    // 1. Escrow Funds via Pi SDK
+    // 1. Escrow Funds via Pi SDK (Routed strictly to Escrow Contract)
     try {
-      await piService.createPayment(
+      await piService.createEscrowPayment(
         `Escrow Deposit: ${formTitle}`,
         priceVal,
         {
