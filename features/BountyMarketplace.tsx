@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState } from 'react';
 import { GlassCard } from '../components/GlassCard';
 import { bountySmartContract } from '../services/bountySmartContract';
@@ -138,7 +136,7 @@ export const BountyMarketplace: React.FC = () => {
                 <div className="text-xs text-green-300">Funds transferred via Smart Contract</div>
                 {lastPayout.discountApplied && (
                     <div className="text-[10px] bg-neon-purple/20 text-neon-purple px-2 py-0.5 rounded border border-neon-purple/30 mt-1 inline-block font-bold">
-                        💎 Staker Discount Active (-50% Fees)
+                        💎 Staker Utility Active: 50% Fee Discount
                     </div>
                 )}
              </div>

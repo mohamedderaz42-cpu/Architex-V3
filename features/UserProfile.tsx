@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState, useRef } from 'react';
 import { UserSession, DesignAsset } from '../types';
 import { GlassCard } from '../components/GlassCard';
@@ -103,8 +101,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session }) => {
           try {
              const result = await dalSubmitInstallationProof(uploadingDesignId, base64Data);
              if (result.success) {
-                 alert(`Verification Successful! +${result.reward} ARTX Cashback has been granted.`);
-                 fetchDesigns(); // Refresh UI
+                 alert(`Verification Successful! +${result.reward} ARTX Cashback has been granted to your wallet.`);
+                 fetchDesigns(); // Refresh UI to show verify status
+                 // Ideally trigger an app-level balance refresh here as well
              } else {
                  alert(`Verification Failed: ${result.reason}`);
              }
@@ -230,7 +229,6 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session }) => {
             {portfolio.map(design => {
                 const proofStatus = design.installationProof?.status || 'NONE';
                 const isProofVerified = proofStatus === 'VERIFIED';
-                const isProofPending = proofStatus === 'PENDING';
                 const isProofRejected = proofStatus === 'REJECTED';
 
                 return (
@@ -251,7 +249,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session }) => {
                             {(design.status === 'UNLOCKED' || design.status === 'MINTED') && (
                                 <div className="mt-4 pt-4 border-t border-white/5">
                                     {isProofVerified ? (
-                                        <div className="bg-green-500/10 border border-green-500/30 rounded p-2 flex items-center gap-2">
+                                        <div className="bg-green-500/10 border border-green-500/30 rounded p-2 flex items-center gap-2 animate-[pulse_3s_infinite]">
                                             <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400">
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                                             </div>
@@ -271,7 +269,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session }) => {
                                                 className="w-full py-2 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 hover:from-indigo-500/30 hover:to-purple-500/30 border border-white/10 rounded-lg text-xs font-bold text-gray-300 hover:text-white transition-all flex items-center justify-center gap-2"
                                             >
                                                 {isVerifying && uploadingDesignId === design.id ? (
-                                                    <span className="animate-pulse">Analyzing...</span>
+                                                    <span className="animate-pulse">Analyzing Real World Data...</span>
                                                 ) : (
                                                     <>
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>

@@ -1,5 +1,3 @@
-
-
 import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
 import { visionAdapter } from "./vision/VisionAdapter";
@@ -14,6 +12,9 @@ const PI_HEADERS = {
 
 const DEFAULT_AVATAR = "https://ui-avatars.com/api/?name=Pi+User&background=7928ca&color=fff";
 const CURRENT_USER_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150";
+
+// Mock User State (Mutable for Demo)
+let mockUserBalance = 0;
 
 // In-memory store for session (Mock DB)
 let mockDesigns: DesignAsset[] = [
@@ -110,8 +111,8 @@ export const dalGetAccountInfo = async (): Promise<UserSession> => {
     isAuthenticated: true,
     username: 'PiUser_Alpha',
     walletAddress: 'G...ARCHITEX_USER',
-    hasTrustline: false,
-    balance: 0,
+    hasTrustline: mockUserBalance > 0, // Assume trustline if balance exists
+    balance: mockUserBalance,
     avatarUrl: CURRENT_USER_AVATAR,
     stats: {
         designsCreated: 12,
@@ -123,6 +124,7 @@ export const dalGetAccountInfo = async (): Promise<UserSession> => {
 
 export const dalCreateTrustline = async (tokenId: string): Promise<boolean> => {
   await new Promise(resolve => setTimeout(resolve, 1500));
+  mockUserBalance = 100.00; // Simulate Airdrop
   return true;
 };
 
@@ -200,8 +202,8 @@ export const dalSubmitInstallationProof = async (designId: string, imageBase64: 
             rewardAmount: reward
         };
 
-        // Note: Actual balance update would happen in a real ledger transaction here.
-        // For simulation, we assume the UI will reflect this from the asset state.
+        // 4. Update User Balance (Grant Cashback)
+        mockUserBalance += reward;
 
         return { success: true, reward };
     } else {

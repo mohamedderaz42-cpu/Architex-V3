@@ -178,8 +178,8 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* AI Companion */}
-      <ArchieBot />
+      {/* AI Companion - Now Context Aware */}
+      <ArchieBot currentView={view} />
 
       {/* Footer */}
       <footer className="mt-20 border-t border-white/5 pt-8 text-center text-gray-500 text-xs">

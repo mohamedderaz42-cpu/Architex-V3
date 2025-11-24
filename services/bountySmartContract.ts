@@ -1,5 +1,3 @@
-
-
 import { Bounty, BountyStatus, ContractPayout } from "../types";
 import { CONTRACT_CONFIG } from "../constants";
 import { stakingService } from "./stakingService";
