@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { ViewState, UserSession, SystemMode } from './types';
 import { Dashboard } from './features/Dashboard';
@@ -24,6 +25,7 @@ import { GovernanceDAO } from './features/GovernanceDAO';
 import { DesignChallenges } from './features/DesignChallenges';
 import { EnterprisePortal } from './features/EnterprisePortal';
 import { CarbonCalculator } from './features/CarbonCalculator';
+import { ArchitexGo } from './features/ArchitexGo';
 import { GlassCard } from './components/GlassCard';
 import { ArchieBot } from './components/ArchieBot';
 import { initializeSession, handleAddTrustline } from './services/orchestrator';
@@ -189,7 +191,7 @@ const App: React.FC = () => {
           <NavItem label="DeFi" target={ViewState.DEFI} />
           <NavItem label="Staking" target={ViewState.STAKING} />
           <NavItem label="Bounties" target={ViewState.BOUNTIES} />
-          <NavItem label="Store" target={ViewState.BLUEPRINTS} />
+          <NavItem label="Architex Go" target={ViewState.ARCHITEX_GO} />
           
           <div className="w-px h-6 bg-white/20 mx-1 self-center hidden md:block"></div>
           <NavItem label="Stock" target={ViewState.INVENTORY} />
@@ -258,6 +260,7 @@ const App: React.FC = () => {
         {view === ViewState.CHALLENGES && <DesignChallenges />}
         {view === ViewState.ENTERPRISE_PORTAL && <EnterprisePortal />}
         {view === ViewState.CALCULATOR && <CarbonCalculator />}
+        {view === ViewState.ARCHITEX_GO && <ArchitexGo />}
         
         {(view === ViewState.ADMIN_LOGIN || view === ViewState.ADMIN_PANEL) && (
             <AdminPanel onLogout={() => {

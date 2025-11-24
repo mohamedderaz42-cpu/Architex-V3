@@ -1,6 +1,7 @@
 
+
 // ... imports ...
-import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult, Order, OrderStatus, ServiceProviderProfile, ArbitratorProfile, Dispute, Bounty, BountyStatus, TrustProfile, DesignChallenge, EnterpriseProfile, EnterpriseMember } from "../types";
+import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult, Order, OrderStatus, ServiceProviderProfile, ArbitratorProfile, Dispute, Bounty, BountyStatus, TrustProfile, DesignChallenge, EnterpriseProfile, EnterpriseMember, ServiceRequest, ServiceCategory, ServiceBid } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
 import { visionAdapter } from "./vision/VisionAdapter";
 import { trustScoreService } from "./trustScoreService";
@@ -233,7 +234,9 @@ const mockServiceProviders: ServiceProviderProfile[] = [
         ],
         hourlyRate: 85,
         location: 'California, USA',
-        available: true
+        available: true,
+        geoStatus: 'ONLINE',
+        currentLocation: { lat: 0.01, lng: 0.01 } // Offset from center for mock radar
     },
     {
         id: 'prov_2',
@@ -248,7 +251,9 @@ const mockServiceProviders: ServiceProviderProfile[] = [
         ],
         hourlyRate: 60,
         location: 'Nevada, USA',
-        available: true
+        available: true,
+        geoStatus: 'BUSY',
+        currentLocation: { lat: -0.02, lng: 0.03 }
     }
 ];
 
@@ -297,6 +302,8 @@ let mockDisputes: Dispute[] = [
         createdAt: Date.now() - 200000
     }
 ];
+
+let activeServiceRequests: ServiceRequest[] = [];
 
 // UPDATED ACCOUNT INFO FUNCTION WITH WHITELIST CHECK
 export const dalGetAccountInfo = async (): Promise<UserSession> => {
@@ -353,10 +360,6 @@ export const dalCreateTrustline = async (tokenId: string): Promise<boolean> => {
 export const dalGetLiveTokenStats = async (): Promise<TokenomicsConfig> => {
   return TOKENOMICS;
 };
-
-// ... (Rest of methods: Design, Vendor, Inventory, Cart, Messaging, Service, Dispute, Challenges, Enterprise - Keeping generic implementations) ...
-// I will omit repeating all the other unchanged methods to save token space, assuming the system retains them. 
-// If I must output the FULL file content, I will paste the remaining blocks below.
 
 // ... [DESIGN METHODS] ...
 export const dalGenerateBlueprint = async (scanData: any): Promise<DesignAsset> => {
@@ -594,4 +597,74 @@ export const dalSubmitBulkOrder = async (items: { sku: string, quantity: number 
     const newOrder: Order = { id: `B2B-${Date.now()}`, customerId: 'ent_mega_corp', customerName: mockEnterprise.name, items: cartItems, total: total, status: 'PROCESSING', timestamp: Date.now(), shippingAddress: 'Enterprise HQ Dock 4', payoutStatus: 'ESCROWED', isBulkOrder: true };
     mockOrders.unshift(newOrder);
     return newOrder;
+};
+
+// ... [ARCHITEX GO METHODS] ...
+export const dalCreateServiceRequest = async (category: ServiceCategory, desc: string, location: string): Promise<ServiceRequest> => {
+    await new Promise(r => setTimeout(r, 800));
+    const newReq: ServiceRequest = {
+        id: `req_go_${Date.now()}`,
+        clientId: 'PiUser_Alpha',
+        category,
+        description: desc,
+        location,
+        coordinates: { lat: 0, lng: 0 }, // Center
+        status: 'BIDDING',
+        suggestedPrice: { min: 20, max: 50 },
+        bids: [],
+        createdAt: Date.now()
+    };
+    activeServiceRequests.push(newReq);
+    
+    // Simulate Incoming Bid after 2 seconds
+    setTimeout(() => {
+        const bid: ServiceBid = {
+            id: `bid_${Date.now()}`,
+            providerId: 'prov_1',
+            providerName: 'Felix Construction',
+            providerAvatar: 'https://ui-avatars.com/api/?name=FC&background=22c55e&color=fff',
+            providerRating: 4.9,
+            amount: 45,
+            etaMinutes: 12,
+            distanceKm: 3.2
+        };
+        const idx = activeServiceRequests.findIndex(r => r.id === newReq.id);
+        if (idx > -1) {
+            activeServiceRequests[idx].bids.push(bid);
+        }
+    }, 2000);
+
+    return newReq;
+};
+
+export const dalGetActiveServiceRequest = async (): Promise<ServiceRequest | null> => {
+    return activeServiceRequests.find(r => r.status !== 'COMPLETED' && r.status !== 'CANCELLED') || null;
+};
+
+export const dalGetNearbyProviders = async (category: ServiceCategory): Promise<ServiceProviderProfile[]> => {
+    await new Promise(r => setTimeout(r, 600));
+    return mockServiceProviders.filter(p => p.geoStatus === 'ONLINE'); // Simple filter
+};
+
+export const dalAcceptBid = async (requestId: string, bidId: string): Promise<ServiceRequest | null> => {
+    const idx = activeServiceRequests.findIndex(r => r.id === requestId);
+    if (idx === -1) return null;
+    
+    const req = activeServiceRequests[idx];
+    const bid = req.bids.find(b => b.id === bidId);
+    if (!bid) return null;
+
+    req.status = 'IN_PROGRESS';
+    req.selectedProviderId = bid.providerId;
+    req.finalPrice = bid.amount;
+    
+    return req;
+};
+
+export const dalCompleteServiceRequest = async (requestId: string): Promise<boolean> => {
+    const idx = activeServiceRequests.findIndex(r => r.id === requestId);
+    if (idx === -1) return false;
+    
+    activeServiceRequests[idx].status = 'COMPLETED';
+    return true;
 };

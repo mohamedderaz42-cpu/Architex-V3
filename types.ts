@@ -27,7 +27,8 @@ export enum ViewState {
   GOVERNANCE = 'GOVERNANCE',
   CHALLENGES = 'CHALLENGES',
   ENTERPRISE_PORTAL = 'ENTERPRISE_PORTAL',
-  CALCULATOR = 'CALCULATOR'
+  CALCULATOR = 'CALCULATOR',
+  ARCHITEX_GO = 'ARCHITEX_GO'
 }
 
 export enum NetworkType {
@@ -323,6 +324,9 @@ export interface ServiceProviderProfile {
     hourlyRate: number;
     location: string;
     available: boolean;
+    // Architex Go Fields
+    geoStatus?: 'ONLINE' | 'OFFLINE' | 'BUSY';
+    currentLocation?: { lat: number; lng: number };
 }
 
 export interface ArbitratorProfile {
@@ -354,6 +358,35 @@ export interface Dispute {
         reason: string;
         timestamp: number;
     };
+    createdAt: number;
+}
+
+// Architex Go Types
+export type ServiceCategory = 'PLUMBING' | 'ELECTRICAL' | 'CARPENTRY' | 'PAINTING' | 'HVAC';
+
+export interface ServiceBid {
+    id: string;
+    providerId: string;
+    providerName: string;
+    providerAvatar: string;
+    providerRating: number;
+    amount: number;
+    etaMinutes: number;
+    distanceKm: number;
+}
+
+export interface ServiceRequest {
+    id: string;
+    clientId: string;
+    category: ServiceCategory;
+    description: string;
+    location: string; // Text address for now
+    coordinates: { lat: number, lng: number };
+    status: 'OPEN' | 'BIDDING' | 'IN_PROGRESS' | 'COMPLETED' | 'DISPUTED' | 'CANCELLED';
+    suggestedPrice: { min: number, max: number };
+    finalPrice?: number;
+    selectedProviderId?: string;
+    bids: ServiceBid[];
     createdAt: number;
 }
 
