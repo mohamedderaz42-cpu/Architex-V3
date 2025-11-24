@@ -3,9 +3,13 @@
 
 
 
-import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult, Order, OrderStatus, ServiceProviderProfile, ArbitratorProfile, Dispute, Bounty, BountyStatus } from "../types";
+
+
+import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult, Order, OrderStatus, ServiceProviderProfile, ArbitratorProfile, Dispute, Bounty, BountyStatus, TrustProfile } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
 import { visionAdapter } from "./vision/VisionAdapter";
+import { trustScoreService } from "./trustScoreService";
+import { stakingService } from "./stakingService";
 
 // Represents the compliant headers required by Pi Network distributed backend
 const PI_HEADERS = {
@@ -264,6 +268,29 @@ let mockDisputes: Dispute[] = [
 
 export const dalGetAccountInfo = async (): Promise<UserSession> => {
   await new Promise(resolve => setTimeout(resolve, 800));
+
+  const stats = {
+      designsCreated: 12,
+      likesReceived: 345,
+      volumeTraded: 15.5
+  };
+
+  // Mock Staked Amount via Staking Service
+  // In real app, this would be a direct DB query
+  const stakes = await stakingService.getUserStakes('CURRENT_USER'); // Using mock constant
+  const totalStaked = stakes.reduce((sum, s) => sum + s.amount, 0);
+
+  // Trust Algorithm Calculation
+  const trustProfile = trustScoreService.calculateTrustScore(
+      stats,
+      245, // days active mock
+      0, // disputes lost
+      totalStaked
+  );
+
+  // Voting Power Calculation
+  const votingPower = trustScoreService.calculateVotingPower(totalStaked, trustProfile.score);
+
   return {
     isAuthenticated: true,
     username: 'PiUser_Alpha',
@@ -271,13 +298,11 @@ export const dalGetAccountInfo = async (): Promise<UserSession> => {
     hasTrustline: mockUserBalance > 0, // Assume trustline if balance exists
     balance: mockUserBalance,
     avatarUrl: CURRENT_USER_AVATAR,
-    stats: {
-        designsCreated: 12,
-        likesReceived: 345,
-        volumeTraded: 15.5
-    },
+    stats,
     tier: mockUserTier,
-    role: 'USER'
+    role: 'USER',
+    trustProfile,
+    votingPower
   };
 };
 

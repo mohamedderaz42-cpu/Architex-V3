@@ -22,8 +22,9 @@ export enum ViewState {
   INVENTORY = 'INVENTORY',
   SHIPPING = 'SHIPPING',
   CART = 'CART',
-  SERVICES = 'SERVICES', // New: Service Provider Network
-  DISPUTES = 'DISPUTES'  // New: Dispute Resolution Center
+  SERVICES = 'SERVICES',
+  DISPUTES = 'DISPUTES',
+  GOVERNANCE = 'GOVERNANCE' // New: DAO Governance
 }
 
 export enum NetworkType {
@@ -54,6 +55,17 @@ export interface UserStats {
 
 export type UserTier = 'FREE' | 'PRO' | 'ACCELERATOR';
 
+export interface TrustProfile {
+  score: number; // 0-100
+  level: 'Novice' | 'Associate' | 'Trusted' | 'Authority';
+  components: {
+    financial: number; // Based on volume/staking
+    reputation: number; // Based on ratings
+    history: number; // Account age/activity
+    legal: number; // Dispute outcome history
+  };
+}
+
 export interface UserSession {
   isAuthenticated: boolean;
   username: string;
@@ -63,7 +75,9 @@ export interface UserSession {
   avatarUrl: string;
   stats: UserStats;
   tier: UserTier;
-  role?: 'USER' | 'PROVIDER' | 'ARBITRATOR'; // New: Role based access
+  role?: 'USER' | 'PROVIDER' | 'ARBITRATOR';
+  trustProfile?: TrustProfile;
+  votingPower?: number; // Calculated: Staked + (TrustScore * Multiplier)
 }
 
 export interface ChatMessage {
@@ -345,6 +359,31 @@ export interface UserStake {
   startTime: number;
   lastClaimTime: number;
   unclaimedRewards: number;
+}
+
+// Governance Types
+export type ProposalStatus = 'ACTIVE' | 'PASSED' | 'REJECTED' | 'EXECUTED';
+
+export interface GovernanceProposal {
+    id: string;
+    title: string;
+    description: string;
+    proposer: string;
+    startTime: number;
+    endTime: number;
+    status: ProposalStatus;
+    votesFor: number;
+    votesAgainst: number;
+    quorumReached: boolean;
+    tags: string[];
+}
+
+export interface Vote {
+    proposalId: string;
+    voter: string;
+    support: boolean;
+    power: number;
+    timestamp: number;
 }
 
 // Oracle Types
