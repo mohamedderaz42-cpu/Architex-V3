@@ -58,7 +58,7 @@ export const SmartCart: React.FC = () => {
         setConflict(null);
         
         try {
-            const result = await dalCheckout();
+            const result = await dalCheckout(liabilityReleased);
             
             if (result.success) {
                 alert(`Order Successfully Placed! ID: ${result.orderId}`);

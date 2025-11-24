@@ -301,7 +301,7 @@ export const VendorPortal: React.FC = () => {
                                 {!isApplied && (
                                     <button 
                                         type="submit" 
-                                        disabled={submitting}
+                                        disabled={submitting || !waiverSignature || !hasReadWaiver}
                                         className="w-full py-4 bg-gradient-to-r from-neon-purple to-neon-cyan text-black font-bold rounded-lg hover:shadow-[0_0_20px_rgba(0,243,255,0.4)] transition-all disabled:opacity-50 flex justify-center items-center gap-2"
                                     >
                                         {submitting ? (

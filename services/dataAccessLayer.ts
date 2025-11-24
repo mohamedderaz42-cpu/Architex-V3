@@ -47,8 +47,6 @@ let mockVendorProfile: VendorApplication = {
 };
 
 // ... (Keep mockInventory, mockCart, mockLedger, mockShippingZones, mockOrders, mockDesigns, mockGallery, mockChallenges, mockConversations, mockMessages, mockServiceProviders, mockArbitrators, mockDisputes)
-// To avoid file bloat in the response, I will assume the mock data is preserved here as per the instruction to output the FULL content.
-// I will reconstruct the file content structure around the changes.
 
 let mockInventory: InventoryItem[] = [
     { id: 'inv_1', sku: 'MAT-PLA-001', name: 'PLA Filament (High Grade)', category: 'MATERIAL', quantity: 2, unitPrice: 2.50, location: 'Warehouse A', lowStockThreshold: 10, lastUpdated: Date.now(), sustainabilityTags: ['Standard'], co2PerUnit: 4.5, ecoRank: 3 },
@@ -442,18 +440,34 @@ export const dalSubmitVendorApplication = async (data: Partial<VendorApplication
     return { ...mockVendorProfile };
 };
 export const dalGetVendorOrders = async (): Promise<Order[]> => { return [...mockOrders].sort((a, b) => b.timestamp - a.timestamp); };
-export const dalGetClientOrders = async (): Promise<Order[]> => { 
+
+// Phase 5.3: Check Auto-Release
+export const dalCheckAutoRelease = async (): Promise<void> => {
+    const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    let releasedCount = 0;
+
     mockOrders.forEach(order => {
-        if (order.status === 'SHIPPED' && order.payoutStatus !== 'RELEASED') {
-            const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
-            if (Date.now() - order.timestamp > fourteenDaysMs) {
+        if (order.status === 'SHIPPED' && order.payoutStatus === 'ESCROWED') {
+            if (now - order.timestamp > fourteenDaysMs) {
+                // Auto-release logic
                 order.payoutStatus = 'AUTO_RELEASED';
+                const total = order.total;
+                console.log(`[SmartContract] AUTO-RELEASE (Time-Lock Expired): ${order.id}`);
+                console.log(`[SmartContract] VENDOR CREDIT: ${(total * 0.90).toFixed(2)} Pi`);
+                releasedCount++;
             }
         }
     });
-    
+    if(releasedCount > 0) console.log(`[System] Auto-released ${releasedCount} orders.`);
+};
+
+export const dalGetClientOrders = async (): Promise<Order[]> => { 
+    // Run the check before returning logic
+    await dalCheckAutoRelease();
     return [...mockOrders].filter(o => o.customerId === 'PiUser_Alpha').sort((a, b) => b.timestamp - a.timestamp); 
 };
+
 export const dalUpdateOrderStatus = async (orderId: string, status: OrderStatus, trackingNumber?: string): Promise<Order | null> => {
     await new Promise(resolve => setTimeout(resolve, 800));
     const idx = mockOrders.findIndex(o => o.id === orderId);
@@ -461,13 +475,31 @@ export const dalUpdateOrderStatus = async (orderId: string, status: OrderStatus,
     mockOrders[idx] = { ...mockOrders[idx], status, trackingNumber: trackingNumber || mockOrders[idx].trackingNumber };
     return mockOrders[idx];
 };
+
 export const dalConfirmReceipt = async (orderId: string): Promise<Order | null> => {
     await new Promise(resolve => setTimeout(resolve, 1000));
     const idx = mockOrders.findIndex(o => o.id === orderId);
     if (idx === -1) return null;
-    mockOrders[idx] = { ...mockOrders[idx], status: 'DELIVERED', payoutStatus: 'RELEASED' };
+    
+    const order = mockOrders[idx];
+    
+    // Phase 5.4: Automated Revenue Split
+    const total = order.total;
+    const platformFee = total * 0.10; // 10% Treasury
+    const vendorPayout = total * 0.90; // 90% Vendor
+    
+    console.log(`[SmartContract] SPLIT EXECUTED for Order ${orderId}`);
+    console.log(`[SmartContract] TREASURY CREDIT: ${platformFee.toFixed(2)} Pi`);
+    console.log(`[SmartContract] VENDOR CREDIT: ${vendorPayout.toFixed(2)} Pi`);
+    
+    mockOrders[idx] = { 
+        ...order, 
+        status: 'DELIVERED', 
+        payoutStatus: 'RELEASED' 
+    };
     return mockOrders[idx];
 };
+
 export const dalGetInventory = async (): Promise<InventoryItem[]> => { return [...mockInventory]; };
 export const dalGetLedger = async (): Promise<LedgerEntry[]> => { return [...mockLedger].sort((a, b) => b.timestamp - a.timestamp); };
 export const dalAdjustStock = async (itemId: string, quantityDelta: number, reason: string): Promise<boolean> => {
@@ -537,7 +569,7 @@ export const dalApplySuggestion = async (suggestion: SmartSuggestion): Promise<v
         }
     } else if (suggestion.type === 'BUNDLE') { await dalAddToCart(suggestion.suggestedItem, 1); }
 };
-export const dalCheckout = async (): Promise<CheckoutResult> => {
+export const dalCheckout = async (liabilitySigned: boolean = true): Promise<CheckoutResult> => {
     await new Promise(r => setTimeout(r, 1500));
     for (const cartItem of mockCart) {
         const stockItem = mockInventory.find(i => i.id === cartItem.id);
@@ -556,7 +588,18 @@ export const dalCheckout = async (): Promise<CheckoutResult> => {
         if (inCart) { return { ...inv, quantity: inv.quantity - inCart.cartQuantity }; }
         return inv;
     });
-    const newOrder: Order = { id: `ORD-${Date.now().toString().substr(-6).toUpperCase()}`, customerId: 'PiUser_Alpha', customerName: 'Current User', items: [...mockCart], total: mockCart.reduce((sum, item) => sum + (item.unitPrice * item.cartQuantity), 0), status: 'PENDING', timestamp: Date.now(), shippingAddress: '123 Main St, Pi Network City, 00000', payoutStatus: 'ESCROWED', liabilityReleaseSigned: true };
+    const newOrder: Order = { 
+        id: `ORD-${Date.now().toString().substr(-6).toUpperCase()}`, 
+        customerId: 'PiUser_Alpha', 
+        customerName: 'Current User', 
+        items: [...mockCart], 
+        total: mockCart.reduce((sum, item) => sum + (item.unitPrice * item.cartQuantity), 0), 
+        status: 'PENDING', 
+        timestamp: Date.now(), 
+        shippingAddress: '123 Main St, Pi Network City, 00000', 
+        payoutStatus: 'ESCROWED', 
+        liabilityReleaseSigned: liabilitySigned 
+    };
     mockOrders.unshift(newOrder);
     mockCart = [];
     return { success: true, orderId: newOrder.id };
