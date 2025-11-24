@@ -1,0 +1,25 @@
+{
+  "activeProvider": "GEMINI",
+  "providers": {
+    "GEMINI": {
+      "id": "GEMINI",
+      "name": "Google Gemini",
+      "apiEnvVar": "API_KEY",
+      "models": {
+        "text": "gemini-2.5-flash",
+        "vision": "gemini-2.5-flash",
+        "image_generation": "gemini-2.5-flash-image"
+      }
+    },
+    "OPENAI": {
+      "id": "OPENAI",
+      "name": "OpenAI",
+      "apiEnvVar": "OPENAI_API_KEY",
+      "models": {
+        "text": "gpt-4-turbo",
+        "vision": "gpt-4-vision-preview",
+        "image_generation": "dall-e-3"
+      }
+    }
+  }
+}
