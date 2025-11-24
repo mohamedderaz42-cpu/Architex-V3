@@ -2,9 +2,17 @@
 // OFFLINE SERVICE
 // Manages local caching and network resilience
 
+interface QueuedAction {
+    id: string;
+    type: string;
+    payload: any;
+    timestamp: number;
+}
+
 class OfflineService {
     private isOnlineVal: boolean = navigator.onLine;
     private cachePrefix = 'architex_cache_';
+    private queueKey = 'architex_action_queue';
 
     constructor() {
         window.addEventListener('online', () => {
@@ -70,9 +78,46 @@ class OfflineService {
         }
     }
 
-    private sync() {
-        // Placeholder for syncing pending write actions
-        // e.g. queued orders, messages
+    /**
+     * Queue an action to be performed when connectivity is restored.
+     */
+    public queueAction(type: string, payload: any): void {
+        const queue = this.getQueue();
+        queue.push({
+            id: `act_${Date.now()}_${Math.random().toString(36).substr(2,5)}`,
+            type,
+            payload,
+            timestamp: Date.now()
+        });
+        localStorage.setItem(this.queueKey, JSON.stringify(queue));
+        console.log(`[OfflineService] Action Queued: ${type}`);
+    }
+
+    private getQueue(): QueuedAction[] {
+        try {
+            const raw = localStorage.getItem(this.queueKey);
+            return raw ? JSON.parse(raw) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    private async sync() {
+        const queue = this.getQueue();
+        if (queue.length === 0) return;
+
+        console.log(`[OfflineService] Syncing ${queue.length} pending actions...`);
+        
+        // Simulate processing
+        for (const action of queue) {
+            await new Promise(r => setTimeout(r, 500));
+            console.log(`[OfflineService] Synced Action: ${action.type}`, action.payload);
+            // In a real app, we would call the API here.
+        }
+
+        // Clear Queue
+        localStorage.removeItem(this.queueKey);
+        console.log("[OfflineService] Sync Complete.");
     }
 }
 

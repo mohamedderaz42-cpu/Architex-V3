@@ -1,7 +1,4 @@
 
-
-
-
 import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../components/GlassCard';
 import { CartItem, SmartSuggestion, CheckoutResult } from '../types';
@@ -16,6 +13,9 @@ export const SmartCart: React.FC = () => {
     // Checkout State
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [conflict, setConflict] = useState<CheckoutResult['conflict'] | null>(null);
+    
+    // Phase 5: Shipping Liability Shield
+    const [liabilityReleased, setLiabilityReleased] = useState(false);
 
     useEffect(() => {
         loadCart();
@@ -50,6 +50,10 @@ export const SmartCart: React.FC = () => {
     };
     
     const handleCheckout = async () => {
+        if (!liabilityReleased) {
+            alert("You must accept the shipping liability waiver to proceed.");
+            return;
+        }
         setIsCheckingOut(true);
         setConflict(null);
         
@@ -59,6 +63,7 @@ export const SmartCart: React.FC = () => {
             if (result.success) {
                 alert(`Order Successfully Placed! ID: ${result.orderId}`);
                 loadCart(); // Should be empty
+                setLiabilityReleased(false);
             } else if (result.conflict) {
                 // Trigger conflict modal
                 setConflict(result.conflict);
@@ -152,7 +157,7 @@ export const SmartCart: React.FC = () => {
                     )}
                 </div>
 
-                {/* Right Col: AI Suggestions */}
+                {/* Right Col: AI Suggestions & Checkout */}
                 <div className="space-y-4">
                     <GlassCard className="bg-gradient-to-br from-neon-purple/10 to-black border-neon-purple/50">
                         <div className="flex items-center gap-3 mb-4">
@@ -212,9 +217,27 @@ export const SmartCart: React.FC = () => {
                         )}
                     </GlassCard>
 
+                    {/* Shipping Liability Shield */}
+                    {cart.length > 0 && (
+                        <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                            <label className="flex items-start gap-3 cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    checked={liabilityReleased}
+                                    onChange={(e) => setLiabilityReleased(e.target.checked)}
+                                    className="mt-1 accent-neon-cyan"
+                                />
+                                <div className="text-xs text-gray-300">
+                                    <span className="font-bold text-white block mb-1">Shipping Liability Release</span>
+                                    I release Architex from all shipping liability. I understand that delivery is the sole responsibility of the independent vendor.
+                                </div>
+                            </label>
+                        </div>
+                    )}
+
                     <button 
                         onClick={handleCheckout}
-                        disabled={cart.length === 0 || isCheckingOut}
+                        disabled={cart.length === 0 || isCheckingOut || !liabilityReleased}
                         className="w-full py-4 bg-gradient-to-r from-neon-purple to-pink-600 rounded-lg font-bold text-white shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2"
                     >
                         {isCheckingOut ? (

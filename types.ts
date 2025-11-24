@@ -1,8 +1,4 @@
 
-
-
-
-
 // Enums must be standard enums, not const enums
 export enum ViewState {
   DASHBOARD = 'DASHBOARD',
@@ -196,6 +192,9 @@ export interface VendorApplication {
         verified: boolean;
     };
     submittedAt?: number;
+    // Phase 5: Immunity Protocol
+    waiverSigned?: boolean;
+    waiverSignature?: string;
 }
 
 // Inventory & Logistics Types
@@ -211,6 +210,7 @@ export interface InventoryItem {
     lastUpdated: number;
     sustainabilityTags?: string[]; 
     co2PerUnit?: number;
+    ecoRank?: number; // Calculated rank for display
 }
 
 export interface LedgerEntry {
@@ -247,8 +247,9 @@ export interface Order {
     timestamp: number;
     shippingAddress: string;
     trackingNumber?: string;
-    payoutStatus?: 'ESCROWED' | 'RELEASED'; // Status of funds
+    payoutStatus?: 'ESCROWED' | 'RELEASED' | 'AUTO_RELEASED'; // Status of funds
     isBulkOrder?: boolean; // B2B flag
+    liabilityReleaseSigned?: boolean; // Phase 5: Shipping shield
 }
 
 // Smart Cart Types

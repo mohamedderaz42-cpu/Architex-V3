@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../components/GlassCard';
 import { dalGetInventory, dalGetLedger, dalAdjustStock } from '../services/dataAccessLayer';
@@ -24,7 +25,9 @@ export const InventoryLedger: React.FC = () => {
             dalGetInventory(),
             dalGetLedger()
         ]);
-        setInventory(invData);
+        // Phase 5.5: Sort by Eco-Rank (Default sorting)
+        const sortedInv = invData.sort((a, b) => (b.ecoRank || 0) - (a.ecoRank || 0));
+        setInventory(sortedInv);
         setLedger(ledgerData);
         setLoading(false);
     };
@@ -98,6 +101,7 @@ export const InventoryLedger: React.FC = () => {
                                 <tr>
                                     <th className="px-6 py-4">SKU / Name</th>
                                     <th className="px-6 py-4">Category</th>
+                                    <th className="px-6 py-4">Eco-Rank</th>
                                     <th className="px-6 py-4 text-right">Qty</th>
                                     <th className="px-6 py-4 text-right">Unit Price</th>
                                     <th className="px-6 py-4">Location</th>
@@ -105,7 +109,11 @@ export const InventoryLedger: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
-                                {inventory.map(item => (
+                                {inventory.map(item => {
+                                    // Determine rank color
+                                    const rankColor = (item.ecoRank || 0) >= 8 ? 'text-green-400' : (item.ecoRank || 0) >= 5 ? 'text-yellow-400' : 'text-gray-500';
+                                    
+                                    return (
                                     <tr key={item.id} className="hover:bg-white/5 transition-colors">
                                         <td className="px-6 py-4">
                                             <div className="font-bold text-white">{item.name}</div>
@@ -115,6 +123,19 @@ export const InventoryLedger: React.FC = () => {
                                             <span className="px-2 py-1 rounded border border-white/10 text-[10px] bg-black/20">
                                                 {item.category}
                                             </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-1">
+                                                <span className={`font-bold ${rankColor}`}>{item.ecoRank || 0}</span>
+                                                <span className="text-[8px] text-gray-600 uppercase">/ 10</span>
+                                            </div>
+                                            {item.sustainabilityTags && item.sustainabilityTags.length > 0 && (
+                                                <div className="flex gap-1 mt-1">
+                                                    {item.sustainabilityTags.slice(0,2).map(t => (
+                                                        <span key={t} className="text-[8px] bg-green-900/30 text-green-300 px-1 rounded">{t}</span>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </td>
                                         <td className={`px-6 py-4 text-right font-mono font-bold ${item.quantity <= item.lowStockThreshold ? 'text-red-400' : 'text-green-400'}`}>
                                             {item.quantity}
@@ -134,7 +155,7 @@ export const InventoryLedger: React.FC = () => {
                                             </button>
                                         </td>
                                     </tr>
-                                ))}
+                                )})}
                             </tbody>
                         </table>
                     </div>

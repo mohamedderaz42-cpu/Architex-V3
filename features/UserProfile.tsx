@@ -1,6 +1,4 @@
 
-
-
 import React, { useEffect, useState, useRef } from 'react';
 import { UserSession, DesignAsset, UserTier, Order } from '../types';
 import { GlassCard } from '../components/GlassCard';
@@ -389,7 +387,12 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session, onRefresh }) 
                                   {order.trackingNumber ? (
                                       <div className="mb-4">
                                           <div className="text-sm font-mono text-white mb-1">{order.trackingNumber}</div>
-                                          <div className="text-xs text-blue-400">In Transit</div>
+                                          <div className="text-xs text-blue-400 mb-2">In Transit</div>
+                                          
+                                          {/* SHIPPING LIABILITY DISCLAIMER */}
+                                          <div className="text-[10px] bg-orange-500/10 border border-orange-500/30 p-2 rounded text-orange-200 leading-tight">
+                                              <strong>Disclaimer:</strong> Courier data provided by Vendor. Architex has no control over external logistics.
+                                          </div>
                                       </div>
                                   ) : (
                                       <div className="mb-4 text-sm text-gray-500 italic">Processing at Warehouse...</div>

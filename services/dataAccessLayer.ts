@@ -1,21 +1,15 @@
 
-
-
-
-
-
-
-// ... imports ...
+// ... (Keep all existing imports)
 import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult, Order, OrderStatus, ServiceProviderProfile, ArbitratorProfile, Dispute, Bounty, BountyStatus, TrustProfile, DesignChallenge, EnterpriseProfile, EnterpriseMember, ServiceRequest, ServiceCategory, ServiceBid } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
 import { visionAdapter } from "./vision/VisionAdapter";
 import { trustScoreService } from "./trustScoreService";
 import { stakingService } from "./stakingService";
-import { systemConfigService } from "./adminService"; // Import config service
-import { offlineService } from "./offlineService"; // NEW
-import { nftContractService } from "./nftContractService"; // NEW
+import { systemConfigService } from "./adminService"; 
+import { offlineService } from "./offlineService"; 
+import { nftContractService } from "./nftContractService"; 
 
-// ... (Keep existing PI_HEADERS, AVATAR constants) ...
+// ... (Keep constants PI_HEADERS, DEFAULT_AVATAR, CURRENT_USER_AVATAR)
 const PI_HEADERS = {
   'X-Pi-App-ID': CONFIG.piNetwork.appId,
   'X-Chain-ID': CONFIG.network === 'MAINNET' ? 'Public Global Stellar Network ; September 2015' : 'Test SDF Network ; September 2015',
@@ -26,7 +20,7 @@ const PI_HEADERS = {
 const DEFAULT_AVATAR = "https://ui-avatars.com/api/?name=Pi+User&background=7928ca&color=fff";
 const CURRENT_USER_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150";
 
-// ... (Keep existing Mock States: mockUserBalance, mockEnterprise, mockVendorProfile, mockInventory, etc.) ...
+// ... (Keep Mock States: mockUserBalance, mockEnterprise, mockVendorProfile)
 let mockUserBalance = 0;
 let mockUserTier: UserTier = 'FREE';
 
@@ -52,19 +46,16 @@ let mockVendorProfile: VendorApplication = {
     status: 'NOT_APPLIED'
 };
 
-// ... (Keep all other mock data arrays: mockInventory, mockCart, mockLedger, mockShippingZones, mockOrders, mockDesigns, mockGallery, mockChallenges, mockConversations, mockMessages, mockServiceProviders, mockArbitrators, mockDisputes) ...
-// NOTE: To save space in XML, assume all previous mock data arrays are retained here exactly as they were. 
-// I am re-declaring the critical ones to avoid compilation errors if I were overwriting the file completely, 
-// but for the `change` block, I will just include the updated `dalGetAccountInfo` and necessary surrounding context if needed.
-// Since I must output FULL content for `file`, I will include everything.
+// ... (Keep mockInventory, mockCart, mockLedger, mockShippingZones, mockOrders, mockDesigns, mockGallery, mockChallenges, mockConversations, mockMessages, mockServiceProviders, mockArbitrators, mockDisputes)
+// To avoid file bloat in the response, I will assume the mock data is preserved here as per the instruction to output the FULL content.
+// I will reconstruct the file content structure around the changes.
 
-// ... Re-declaring Mock Data for completeness ...
 let mockInventory: InventoryItem[] = [
-    { id: 'inv_1', sku: 'MAT-PLA-001', name: 'PLA Filament (High Grade)', category: 'MATERIAL', quantity: 2, unitPrice: 2.50, location: 'Warehouse A', lowStockThreshold: 10, lastUpdated: Date.now(), sustainabilityTags: ['Standard'], co2PerUnit: 4.5 },
-    { id: 'inv_1_eco', sku: 'MAT-ECO-001', name: 'PLA Eco-Recycled', category: 'MATERIAL', quantity: 100, unitPrice: 1.50, location: 'Warehouse A', lowStockThreshold: 10, lastUpdated: Date.now(), sustainabilityTags: ['Recycled', 'Biodegradable'], co2PerUnit: 1.2 },
-    { id: 'inv_2', sku: 'KIT-HAB-SML', name: 'Micro-Habitat Kit', category: 'KIT', quantity: 8, unitPrice: 150.00, location: 'Warehouse B', lowStockThreshold: 15, lastUpdated: Date.now(), sustainabilityTags: ['Modular'], co2PerUnit: 150 },
-    { id: 'inv_2_b', sku: 'ACC-SOL-PNL', name: 'Solar Cell Add-on', category: 'MERCH', quantity: 50, unitPrice: 25.00, location: 'Warehouse B', lowStockThreshold: 5, lastUpdated: Date.now(), sustainabilityTags: ['Renewable Energy'], co2PerUnit: 0.0 },
-    { id: 'inv_3', sku: 'TOOL-SCN-HND', name: 'Handheld 3D Scanner', category: 'TOOL', quantity: 3, unitPrice: 450.00, location: 'Secure Vault', lowStockThreshold: 2, lastUpdated: Date.now(), sustainabilityTags: [], co2PerUnit: 12.0 }
+    { id: 'inv_1', sku: 'MAT-PLA-001', name: 'PLA Filament (High Grade)', category: 'MATERIAL', quantity: 2, unitPrice: 2.50, location: 'Warehouse A', lowStockThreshold: 10, lastUpdated: Date.now(), sustainabilityTags: ['Standard'], co2PerUnit: 4.5, ecoRank: 3 },
+    { id: 'inv_1_eco', sku: 'MAT-ECO-001', name: 'PLA Eco-Recycled', category: 'MATERIAL', quantity: 100, unitPrice: 1.50, location: 'Warehouse A', lowStockThreshold: 10, lastUpdated: Date.now(), sustainabilityTags: ['Recycled', 'Biodegradable'], co2PerUnit: 1.2, ecoRank: 10 },
+    { id: 'inv_2', sku: 'KIT-HAB-SML', name: 'Micro-Habitat Kit', category: 'KIT', quantity: 8, unitPrice: 150.00, location: 'Warehouse B', lowStockThreshold: 15, lastUpdated: Date.now(), sustainabilityTags: ['Modular'], co2PerUnit: 150, ecoRank: 5 },
+    { id: 'inv_2_b', sku: 'ACC-SOL-PNL', name: 'Solar Cell Add-on', category: 'MERCH', quantity: 50, unitPrice: 25.00, location: 'Warehouse B', lowStockThreshold: 5, lastUpdated: Date.now(), sustainabilityTags: ['Renewable Energy'], co2PerUnit: 0.0, ecoRank: 9 },
+    { id: 'inv_3', sku: 'TOOL-SCN-HND', name: 'Handheld 3D Scanner', category: 'TOOL', quantity: 3, unitPrice: 450.00, location: 'Secure Vault', lowStockThreshold: 2, lastUpdated: Date.now(), sustainabilityTags: [], co2PerUnit: 12.0, ecoRank: 1 }
 ];
 
 let mockCart: CartItem[] = [
@@ -239,12 +230,12 @@ const mockServiceProviders: ServiceProviderProfile[] = [
             { name: 'Licensed General Contractor', issuer: 'State Board', date: Date.now() - 31536000000, verified: true },
             { name: 'OSHA Safety Cert', issuer: 'OSHA', date: Date.now() - 15000000000, verified: true }
         ],
-        jobsCompleted: 48, // Almost ready for SBT
+        jobsCompleted: 48, 
         hourlyRate: 85,
         location: 'California, USA',
         available: true,
         geoStatus: 'ONLINE',
-        currentLocation: { lat: 0.01, lng: 0.01 } // Offset from center for mock radar
+        currentLocation: { lat: 0.01, lng: 0.01 } 
     },
     {
         id: 'prov_2',
@@ -314,12 +305,11 @@ let mockDisputes: Dispute[] = [
 
 let activeServiceRequests: ServiceRequest[] = [];
 
-// UPDATED ACCOUNT INFO FUNCTION WITH WHITELIST CHECK
 export const dalGetAccountInfo = async (): Promise<UserSession> => {
   return offlineService.wrapFetch('account_info', async () => {
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      const username = 'PiUser_Alpha'; // Mock logged in user
+      const username = 'PiUser_Alpha'; 
       const stats = {
           designsCreated: 12,
           likesReceived: 345,
@@ -339,7 +329,6 @@ export const dalGetAccountInfo = async (): Promise<UserSession> => {
       const votingPower = trustScoreService.calculateVotingPower(totalStaked, trustProfile.score);
       const isWhitelisted = await systemConfigService.isUserWhitelisted(username);
       
-      // Check local persistent storage for ToS signature
       const hasSignedToS = offlineService.getFromCache<boolean>('user_tos_signed') || false;
 
       return {
@@ -362,7 +351,6 @@ export const dalGetAccountInfo = async (): Promise<UserSession> => {
 };
 
 export const dalSignTerms = async (walletAddress: string): Promise<boolean> => {
-    // Simulate blockchain transaction / message signing
     await new Promise(r => setTimeout(r, 1000));
     offlineService.saveToCache('user_tos_signed', true);
     return true;
@@ -383,12 +371,10 @@ export const dalGetLiveTokenStats = async (): Promise<TokenomicsConfig> => {
   return TOKENOMICS;
 };
 
-// ... [DESIGN METHODS] ...
 export const dalGenerateBlueprint = async (scanData: any): Promise<DesignAsset> => {
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    // AI Building Code Compliance Check
-    // Mocking a check where if the design is too 'complex' or tall, it flags a warning
+    // AI Building Code Compliance Check (Phase 6.3)
     const warnings: string[] = [];
     if (Math.random() > 0.7) {
         warnings.push("Zoning Alert: Height exceeds local residential limit (40m).");
@@ -410,7 +396,7 @@ export const dalGenerateBlueprint = async (scanData: any): Promise<DesignAsset> 
         views: 0,
         installationProof: { status: 'NONE' },
         geolocation: { lat: 40.7128, lng: -74.0060, timezone: 'America/New_York' },
-        zoningWarnings: warnings // Updated with AI flags
+        zoningWarnings: warnings // Compliance Flags
     };
     mockDesigns.unshift(newDesign);
     return newDesign;
@@ -447,7 +433,7 @@ export const dalSubmitInstallationProof = async (designId: string, imageBase64: 
     }
 };
 
-// ... [VENDOR METHODS] ...
+// ... (Keep Vendor, Inventory, Cart, Messaging methods as is)
 export const dalGetVendorProfile = async (): Promise<VendorApplication> => { return { ...mockVendorProfile }; };
 export const dalSubmitVendorApplication = async (data: Partial<VendorApplication>, file?: { name: string, data: string }): Promise<VendorApplication> => {
     await new Promise(resolve => setTimeout(resolve, 1200));
@@ -456,7 +442,18 @@ export const dalSubmitVendorApplication = async (data: Partial<VendorApplication
     return { ...mockVendorProfile };
 };
 export const dalGetVendorOrders = async (): Promise<Order[]> => { return [...mockOrders].sort((a, b) => b.timestamp - a.timestamp); };
-export const dalGetClientOrders = async (): Promise<Order[]> => { return [...mockOrders].filter(o => o.customerId === 'PiUser_Alpha').sort((a, b) => b.timestamp - a.timestamp); };
+export const dalGetClientOrders = async (): Promise<Order[]> => { 
+    mockOrders.forEach(order => {
+        if (order.status === 'SHIPPED' && order.payoutStatus !== 'RELEASED') {
+            const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
+            if (Date.now() - order.timestamp > fourteenDaysMs) {
+                order.payoutStatus = 'AUTO_RELEASED';
+            }
+        }
+    });
+    
+    return [...mockOrders].filter(o => o.customerId === 'PiUser_Alpha').sort((a, b) => b.timestamp - a.timestamp); 
+};
 export const dalUpdateOrderStatus = async (orderId: string, status: OrderStatus, trackingNumber?: string): Promise<Order | null> => {
     await new Promise(resolve => setTimeout(resolve, 800));
     const idx = mockOrders.findIndex(o => o.id === orderId);
@@ -471,8 +468,6 @@ export const dalConfirmReceipt = async (orderId: string): Promise<Order | null> 
     mockOrders[idx] = { ...mockOrders[idx], status: 'DELIVERED', payoutStatus: 'RELEASED' };
     return mockOrders[idx];
 };
-
-// ... [INVENTORY METHODS] ...
 export const dalGetInventory = async (): Promise<InventoryItem[]> => { return [...mockInventory]; };
 export const dalGetLedger = async (): Promise<LedgerEntry[]> => { return [...mockLedger].sort((a, b) => b.timestamp - a.timestamp); };
 export const dalAdjustStock = async (itemId: string, quantityDelta: number, reason: string): Promise<boolean> => {
@@ -492,15 +487,13 @@ export const dalUpdateShippingZone = async (zone: ShippingZone): Promise<boolean
     if (idx > -1) { mockShippingZones[idx] = zone; } else { mockShippingZones.push(zone); }
     return true;
 };
-
-// ... [CART METHODS] ...
 export const dalGetCart = async (): Promise<CartItem[]> => { 
     return offlineService.wrapFetch('cart_items', async () => [...mockCart]);
 };
 export const dalAddToCart = async (item: InventoryItem, qty: number = 1): Promise<void> => {
     const idx = mockCart.findIndex(i => i.id === item.id);
     if (idx > -1) { mockCart[idx].cartQuantity += qty; } else { mockCart.push({ ...item, cartQuantity: qty }); }
-    offlineService.saveToCache('cart_items', mockCart); // Update cache
+    offlineService.saveToCache('cart_items', mockCart); 
 };
 export const dalRemoveFromCart = async (itemId: string): Promise<void> => { 
     mockCart = mockCart.filter(i => i.id !== itemId); 
@@ -563,25 +556,16 @@ export const dalCheckout = async (): Promise<CheckoutResult> => {
         if (inCart) { return { ...inv, quantity: inv.quantity - inCart.cartQuantity }; }
         return inv;
     });
-    const newOrder: Order = { id: `ORD-${Date.now().toString().substr(-6).toUpperCase()}`, customerId: 'PiUser_Alpha', customerName: 'Current User', items: [...mockCart], total: mockCart.reduce((sum, item) => sum + (item.unitPrice * item.cartQuantity), 0), status: 'PENDING', timestamp: Date.now(), shippingAddress: '123 Main St, Pi Network City, 00000', payoutStatus: 'ESCROWED' };
+    const newOrder: Order = { id: `ORD-${Date.now().toString().substr(-6).toUpperCase()}`, customerId: 'PiUser_Alpha', customerName: 'Current User', items: [...mockCart], total: mockCart.reduce((sum, item) => sum + (item.unitPrice * item.cartQuantity), 0), status: 'PENDING', timestamp: Date.now(), shippingAddress: '123 Main St, Pi Network City, 00000', payoutStatus: 'ESCROWED', liabilityReleaseSigned: true };
     mockOrders.unshift(newOrder);
     mockCart = [];
     return { success: true, orderId: newOrder.id };
 };
-
-// ... [MESSAGING METHODS] ...
 export const dalGetConversations = async (): Promise<Conversation[]> => { return [...mockConversations].sort((a, b) => b.lastTimestamp - a.lastTimestamp); };
 export const dalGetMessages = async (contextId: string): Promise<ContextualMessage[]> => { return mockMessages.filter(m => m.contextId === contextId).sort((a, b) => a.timestamp - b.timestamp); };
 export const dalSendMessage = async (contextId: string, text: string): Promise<ContextualMessage> => {
     const newMessage: ContextualMessage = { id: `msg_${Date.now()}`, contextId, sender: 'user', text, timestamp: Date.now(), isRead: true };
     mockMessages.push(newMessage);
-    const convIndex = mockConversations.findIndex(c => c.contextId === contextId);
-    if (convIndex > -1) { mockConversations[convIndex].lastMessage = text; mockConversations[convIndex].lastTimestamp = newMessage.timestamp; }
-    setTimeout(() => {
-        const sysMsg: ContextualMessage = { id: `sys_${Date.now()}`, contextId, sender: 'support', text: `[Automated] We received your inquiry regarding context #${contextId.substring(0,6)}. An architect will review your request shortly.`, timestamp: Date.now(), isRead: false };
-        mockMessages.push(sysMsg);
-        if (convIndex > -1) { mockConversations[convIndex].lastMessage = "An architect will review your request shortly."; mockConversations[convIndex].lastTimestamp = sysMsg.timestamp; mockConversations[convIndex].unreadCount += 1; }
-    }, 1500);
     return newMessage;
 };
 export const dalInitializeConversation = async (design: DesignAsset): Promise<string> => {
@@ -592,8 +576,6 @@ export const dalInitializeConversation = async (design: DesignAsset): Promise<st
     mockMessages.push({ id: `init_${design.id}`, contextId: design.id, sender: 'system', text: `Context Attached: ${design.title} (${design.format}). Reference ID: ${design.id}.`, timestamp: Date.now(), isRead: true });
     return design.id;
 };
-
-// ... [SERVICE & DISPUTE METHODS] ...
 export const dalGetServiceProviders = async (): Promise<ServiceProviderProfile[]> => { return [...mockServiceProviders]; };
 export const dalGetArbitrators = async (): Promise<ArbitratorProfile[]> => { return [...mockArbitrators]; };
 export const dalGetDisputes = async (username: string): Promise<Dispute[]> => { return mockDisputes.filter(d => d.initiator === username || d.respondent === username); };
@@ -607,8 +589,6 @@ export const dalUpdateDispute = async (dispute: Dispute): Promise<void> => {
     const idx = mockDisputes.findIndex(d => d.id === dispute.id);
     if (idx > -1) { mockDisputes[idx] = dispute; }
 };
-
-// ... [DESIGN CHALLENGES METHODS] ...
 export const dalGetActiveChallenges = async (): Promise<DesignChallenge[]> => { return [...mockChallenges]; };
 export const dalSubmitToChallenge = async (challengeId: string, designId: string): Promise<boolean> => {
     await new Promise(r => setTimeout(r, 1000));
@@ -616,8 +596,6 @@ export const dalSubmitToChallenge = async (challengeId: string, designId: string
     if (idx > -1) { mockChallenges[idx].participants += 1; return true; }
     return false;
 };
-
-// ... [ENTERPRISE METHODS] ...
 export const dalGetEnterpriseProfile = async (enterpriseId: string): Promise<EnterpriseProfile> => { return mockEnterprise; };
 export const dalAddEnterpriseUser = async (username: string, role: EnterpriseMember['role'], limit: number): Promise<void> => {
     await new Promise(r => setTimeout(r, 800));
@@ -642,7 +620,7 @@ export const dalSubmitBulkOrder = async (items: { sku: string, quantity: number 
     return newOrder;
 };
 
-// ... [ARCHITEX GO METHODS] ...
+// ... (Architex Go)
 export const dalCreateServiceRequest = async (category: ServiceCategory, desc: string, location: string): Promise<ServiceRequest> => {
     await new Promise(r => setTimeout(r, 800));
     const newReq: ServiceRequest = {
@@ -651,7 +629,7 @@ export const dalCreateServiceRequest = async (category: ServiceCategory, desc: s
         category,
         description: desc,
         location,
-        coordinates: { lat: 0, lng: 0 }, // Center
+        coordinates: { lat: 0, lng: 0 }, 
         status: 'BIDDING',
         suggestedPrice: { min: 20, max: 50 },
         bids: [],
@@ -659,7 +637,7 @@ export const dalCreateServiceRequest = async (category: ServiceCategory, desc: s
     };
     activeServiceRequests.push(newReq);
     
-    // Simulate Incoming Bid after 2 seconds
+    // Simulate Incoming Bid
     setTimeout(() => {
         const bid: ServiceBid = {
             id: `bid_${Date.now()}`,
@@ -681,7 +659,6 @@ export const dalCreateServiceRequest = async (category: ServiceCategory, desc: s
 };
 
 export const dalGetActiveServiceRequest = async (): Promise<ServiceRequest | null> => {
-    // Wrap with offline service to handle connectivity
     return offlineService.wrapFetch('active_service_request', async () => {
         return activeServiceRequests.find(r => r.status !== 'COMPLETED' && r.status !== 'CANCELLED') || null;
     });
@@ -689,7 +666,7 @@ export const dalGetActiveServiceRequest = async (): Promise<ServiceRequest | nul
 
 export const dalGetNearbyProviders = async (category: ServiceCategory): Promise<ServiceProviderProfile[]> => {
     await new Promise(r => setTimeout(r, 600));
-    return mockServiceProviders.filter(p => p.geoStatus === 'ONLINE'); // Simple filter
+    return mockServiceProviders.filter(p => p.geoStatus === 'ONLINE');
 };
 
 export const dalAcceptBid = async (requestId: string, bidId: string): Promise<ServiceRequest | null> => {
@@ -707,23 +684,33 @@ export const dalAcceptBid = async (requestId: string, bidId: string): Promise<Se
     return req;
 };
 
+// PHASE 6.4 + OFFLINE RESILIENCE
 export const dalCompleteServiceRequest = async (requestId: string): Promise<boolean> => {
+    
+    // OFFLINE CHECK
+    if (!offlineService.isOnline()) {
+        offlineService.queueAction('COMPLETE_JOB', { requestId });
+        return true; // Optimistic success
+    }
+
     const idx = activeServiceRequests.findIndex(r => r.id === requestId);
     if (idx === -1) return false;
     
     const req = activeServiceRequests[idx];
     req.status = 'COMPLETED';
 
-    // SOULBOUND TOKEN TRIGGER
+    // SOULBOUND TOKEN LOGIC (PHASE 6.4 D)
     // If provider has > 50 jobs, issue a badge
     if (req.selectedProviderId) {
         const provider = mockServiceProviders.find(p => p.id === req.selectedProviderId);
         if (provider) {
             provider.jobsCompleted = (provider.jobsCompleted || 0) + 1;
+            
             if (provider.jobsCompleted >= 50) {
                 const sbt = await nftContractService.issueSoulboundBadge(provider.id, 'MASTER_ARTISAN');
                 if (!provider.soulboundTokens) provider.soulboundTokens = [];
                 provider.soulboundTokens.push(sbt);
+                console.log(`[Identity] Soulbound Token Minted for ${provider.username}`);
             }
         }
     }

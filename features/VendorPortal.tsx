@@ -1,10 +1,8 @@
 
-
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GlassCard } from '../components/GlassCard';
 import { dalGetVendorProfile, dalSubmitVendorApplication, dalGetVendorOrders, dalUpdateOrderStatus } from '../services/dataAccessLayer';
+import { legalService } from '../services/legalService';
 import { VendorApplication, Order } from '../types';
 
 export const VendorPortal: React.FC = () => {
@@ -22,6 +20,10 @@ export const VendorPortal: React.FC = () => {
     const [taxId, setTaxId] = useState('');
     const [email, setEmail] = useState('');
     const [insuranceFile, setInsuranceFile] = useState<File | null>(null);
+    
+    // Immunity Protocol State
+    const [waiverSignature, setWaiverSignature] = useState('');
+    const [hasReadWaiver, setHasReadWaiver] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -42,6 +44,10 @@ export const VendorPortal: React.FC = () => {
             setCompanyName(profile.companyName);
             setTaxId(profile.taxId);
             setEmail(profile.contactEmail);
+            if (profile.waiverSignature) {
+                setWaiverSignature(profile.waiverSignature);
+                setHasReadWaiver(true);
+            }
         }
         setLoading(false);
     };
@@ -63,6 +69,10 @@ export const VendorPortal: React.FC = () => {
             alert("All fields, including Liability Insurance, are required.");
             return;
         }
+        if (!waiverSignature) {
+            alert("You must sign the Immunity Protocol waiver to proceed.");
+            return;
+        }
 
         setSubmitting(true);
 
@@ -79,7 +89,9 @@ export const VendorPortal: React.FC = () => {
             const updated = await dalSubmitVendorApplication({
                 companyName,
                 taxId,
-                contactEmail: email
+                contactEmail: email,
+                waiverSigned: true,
+                waiverSignature: waiverSignature
             }, fileData);
 
             setVendor(updated);
@@ -246,6 +258,46 @@ export const VendorPortal: React.FC = () => {
                                     )}
                                 </div>
 
+                                {/* DIGITAL IMMUNITY PROTOCOL SECTION */}
+                                <div className="border-t border-white/10 pt-6 mt-6">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span className="text-2xl">🛡️</span>
+                                        <h4 className="text-lg font-bold text-white">Immunity Protocol</h4>
+                                    </div>
+                                    
+                                    <div className="bg-black/40 border border-white/10 rounded-lg p-4 mb-4 max-h-40 overflow-y-auto text-xs text-gray-300 font-mono leading-relaxed">
+                                        {legalService.getVendorImmunityWaiver()}
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <label className="flex items-start gap-2 cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={hasReadWaiver}
+                                                onChange={(e) => setHasReadWaiver(e.target.checked)}
+                                                disabled={isApplied}
+                                                className="mt-1 accent-neon-cyan"
+                                            />
+                                            <span className="text-xs text-gray-400">
+                                                I have read and understand that Architex is strictly a Venue and holds no liability for my independent sales operations.
+                                            </span>
+                                        </label>
+
+                                        <div>
+                                            <label className="text-xs text-gray-500 uppercase font-bold">Cryptographic Signature</label>
+                                            <input 
+                                                type="text" 
+                                                value={waiverSignature}
+                                                onChange={(e) => setWaiverSignature(e.target.value)}
+                                                disabled={!hasReadWaiver || isApplied}
+                                                placeholder="Type Full Name to Sign"
+                                                className="w-full mt-1 bg-black/40 border border-white/10 rounded p-3 text-white font-serif italic outline-none focus:border-neon-cyan disabled:opacity-50"
+                                            />
+                                            <p className="text-[10px] text-gray-500 mt-1">This signature is recorded on the immutable ledger.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {!isApplied && (
                                     <button 
                                         type="submit" 
@@ -388,10 +440,10 @@ export const VendorPortal: React.FC = () => {
                                                 {order.status}
                                             </span>
                                             {/* Payout Status Indicator */}
-                                            {order.payoutStatus === 'RELEASED' && (
+                                            {(order.payoutStatus === 'RELEASED' || order.payoutStatus === 'AUTO_RELEASED') && (
                                                 <span className="text-[10px] flex items-center gap-1 bg-green-500/10 text-green-400 px-2 py-0.5 rounded border border-green-500/20 animate-pulse">
                                                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                    Funds Released
+                                                    {order.payoutStatus === 'AUTO_RELEASED' ? 'Auto-Released' : 'Funds Released'}
                                                 </span>
                                             )}
                                         </div>

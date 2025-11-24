@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../components/GlassCard';
 import { dalGetServiceProviders, dalGetArbitrators } from '../services/dataAccessLayer';
@@ -48,10 +46,23 @@ export const ServiceNetwork: React.FC = () => {
 
             {view === 'PROVIDERS' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {providers.map(prov => (
-                        <GlassCard key={prov.id} className="relative group border-white/10 hover:border-neon-cyan/50 transition-all">
-                            <div className="flex items-start gap-4 mb-4">
-                                <img src={prov.avatarUrl} alt={prov.displayName} className="w-12 h-12 rounded-full border border-white/20" />
+                    {providers.map(prov => {
+                        const hasSBT = prov.soulboundTokens && prov.soulboundTokens.length > 0;
+                        
+                        return (
+                        <GlassCard 
+                            key={prov.id} 
+                            className={`relative group transition-all ${hasSBT ? 'border-neon-purple/50 shadow-[0_0_20px_rgba(124,58,237,0.2)]' : 'border-white/10 hover:border-neon-cyan/50'}`}
+                        >
+                            {/* Soulbound Header Badge */}
+                            {hasSBT && (
+                                <div className="absolute -top-3 right-4 bg-neon-purple text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg border border-white/20 flex items-center gap-1">
+                                    <span>✦</span> Master Artisan
+                                </div>
+                            )}
+
+                            <div className="flex items-start gap-4 mb-4 mt-2">
+                                <img src={prov.avatarUrl} alt={prov.displayName} className={`w-12 h-12 rounded-full object-cover ${hasSBT ? 'border-2 border-neon-purple' : 'border border-white/20'}`} />
                                 <div>
                                     <div className="flex items-center gap-2">
                                         <h3 className="font-bold text-white">{prov.displayName}</h3>
@@ -61,11 +72,15 @@ export const ServiceNetwork: React.FC = () => {
                                     </div>
                                     <p className="text-xs text-neon-cyan font-mono uppercase">{prov.role}</p>
                                     
-                                    {/* Soulbound Token Badges */}
-                                    {prov.soulboundTokens && prov.soulboundTokens.length > 0 && (
-                                        <div className="flex gap-1 mt-1">
-                                            {prov.soulboundTokens.map(sbt => (
-                                                <span key={sbt.id} className="cursor-help" title={sbt.name + ': ' + sbt.criteria}>
+                                    {/* Soulbound Token Icons */}
+                                    {hasSBT && (
+                                        <div className="flex gap-1 mt-2">
+                                            {prov.soulboundTokens!.map(sbt => (
+                                                <span 
+                                                    key={sbt.id} 
+                                                    className="cursor-help bg-white/10 p-1 rounded-full hover:bg-white/20 transition-colors" 
+                                                    title={sbt.name + ': ' + sbt.criteria}
+                                                >
                                                     {sbt.icon}
                                                 </span>
                                             ))}
@@ -101,7 +116,7 @@ export const ServiceNetwork: React.FC = () => {
                                 Hire Provider
                             </button>
                         </GlassCard>
-                    ))}
+                    )})}
                 </div>
             )}
 

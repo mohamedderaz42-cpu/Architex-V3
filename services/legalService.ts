@@ -1,6 +1,4 @@
 
-
-
 import { LegalAgreement } from "../types";
 
 export interface ContractParams {
@@ -40,6 +38,31 @@ ARCHITEX DIGITAL IMMUNITY PROTOCOL (TERMS OF SERVICE)
 
 5. CRYPTOGRAPHIC CONSENT
    Your digital signature on this agreement serves as immutable proof of your acceptance of these terms on the Pi Network blockchain.
+      `.trim();
+  }
+
+  /**
+   * VENDOR IMMUNITY PROTOCOL
+   * The strict waiver for independent sellers.
+   */
+  getVendorImmunityWaiver(): string {
+      return `
+VENDOR IMMUNITY PROTOCOL & LIABILITY WAIVER
+
+1. INDEPENDENT STATUS
+   I certify that I am an independent seller and not an employee, agent, or partner of Architex.
+
+2. SUPPLY CHAIN AUTONOMY
+   I acknowledge that Architex is not involved in my supply chain, manufacturing, or logistics. I bear full and sole responsibility for:
+   - Product quality and safety.
+   - Shipping, customs, and duties.
+   - Compliance with local commerce laws.
+
+3. INDEMNIFICATION
+   I agree to indemnify and hold Architex harmless from any claims, damages, or disputes arising from my sales, shipping delays, or defective products.
+
+4. IRREVOCABLE SIGNATURE
+   This signature is cryptographically secured and cannot be revoked once listed on the Marketplace.
       `.trim();
   }
 

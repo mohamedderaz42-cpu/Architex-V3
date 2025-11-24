@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../components/GlassCard';
 import { ServiceRequest, ServiceCategory, ServiceBid, Milestone } from '../types';
@@ -100,13 +98,22 @@ export const ArchitexGo: React.FC = () => {
 
     const handleReleaseMilestone = async (index: number) => {
         if (!activeRequest) return;
+        
+        if (isOffline) {
+            offlineService.queueAction('RELEASE_MILESTONE', { requestId: activeRequest.id, index });
+            alert("Release Queued (Offline Mode). Will sync when online.");
+            // Optimistically update local state for UI
+            const newMilestones = [...milestones];
+            newMilestones[index].status = 'RELEASED';
+            setMilestones(newMilestones);
+            return;
+        }
+
         try {
             await serviceEscrowContract.releaseMilestone(activeRequest.id, index);
-            // Re-fetch milestones state
             const ms = serviceEscrowContract.getMilestones(activeRequest.id);
-            setMilestones([...ms]); // Force re-render
+            setMilestones([...ms]); 
             
-            // If all milestones released, complete job
             const allReleased = ms.every(m => m.status === 'RELEASED');
             if (allReleased) {
                 await dalCompleteServiceRequest(activeRequest.id);
@@ -123,6 +130,14 @@ export const ArchitexGo: React.FC = () => {
     const handleComplete = async () => {
         if (!activeRequest) return;
         try {
+            // If offline, queue
+            if (isOffline) {
+                offlineService.queueAction('COMPLETE_JOB', { requestId: activeRequest.id });
+                alert("Completion Queued. Funds will release when online.");
+                setViewMode('SELECT');
+                return;
+            }
+
             // Smart Contract Release
             await serviceEscrowContract.releaseFunds(activeRequest.id);
             await dalCompleteServiceRequest(activeRequest.id);
@@ -140,29 +155,18 @@ export const ArchitexGo: React.FC = () => {
         if (!activeRequest || !confirm("CRITICAL: This will FREEZE funds and open a dispute. Confirm?")) return;
         await serviceEscrowContract.freezeFunds(activeRequest.id);
         alert("SOS Signal Sent. Funds Frozen. Support Team Dispatched.");
-        // In real app, redirect to Dispute Console
     };
 
     // Radar Visualization Component
     const RadarMap = () => (
         <div className="relative w-full h-64 bg-black/40 rounded-xl overflow-hidden border border-white/10 mb-6">
-            {/* Grid */}
             <div className="absolute inset-0" style={{ 
                 backgroundImage: 'radial-gradient(circle, rgba(0,243,255,0.1) 1px, transparent 1px)', 
                 backgroundSize: '20px 20px' 
             }}></div>
-            
-            {/* Scanner Sweep */}
             <div className="absolute inset-0 w-full h-full rounded-full bg-gradient-to-r from-transparent to-neon-cyan/10 animate-[spin_4s_linear_infinite] opacity-30 origin-center scale-[2]"></div>
-            
-            {/* Center (User) */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-neon-cyan rounded-full shadow-[0_0_20px_rgba(0,243,255,0.8)] z-10"></div>
-            
-            {/* Mock Providers Blips */}
             <div className="absolute top-1/3 left-1/3 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <div className="absolute bottom-1/4 right-1/3 w-2 h-2 bg-green-500 rounded-full animate-pulse delay-75"></div>
-            <div className="absolute top-1/4 right-1/4 w-2 h-2 bg-green-500 rounded-full animate-pulse delay-150"></div>
-            
             <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur px-2 py-1 rounded text-[10px] text-neon-cyan font-mono border border-white/10">
                 RADAR: ACTIVE • 5KM RADIUS
             </div>
@@ -180,8 +184,8 @@ export const ArchitexGo: React.FC = () => {
         <div className="space-y-6 animate-[fadeIn_0.5s_ease-out]">
             {/* Offline Banner */}
             {isOffline && (
-                <div className="bg-orange-500 text-black text-center font-bold text-xs py-2 rounded animate-pulse">
-                    ⚠️ OFFLINE MODE: Functionality Limited. Changes will sync when online.
+                <div className="bg-orange-500 text-black text-center font-bold text-xs py-2 rounded animate-pulse shadow-lg shadow-orange-500/20">
+                    ⚠️ OFFLINE MODE: Actions will be queued and synced automatically.
                 </div>
             )}
 
@@ -308,34 +312,45 @@ export const ArchitexGo: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="flex gap-3 mb-6">
-                            <button className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded text-gray-300 font-bold">
-                                Message Provider
-                            </button>
-                            <button className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded text-gray-300 font-bold">
-                                Call
-                            </button>
-                        </div>
-
-                        {/* Milestones View (If applicable) */}
+                        {/* Milestones View with Visual Progress */}
                         {milestones.length > 0 && (
                             <div className="mb-6 p-4 bg-black/40 rounded-lg border border-white/10">
-                                <h4 className="text-sm font-bold text-white mb-3">Milestone Release Schedule</h4>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h4 className="text-sm font-bold text-white">Milestone Release Schedule</h4>
+                                    <span className="text-[10px] text-neon-cyan bg-neon-cyan/10 px-2 py-1 rounded border border-neon-cyan/20">
+                                        High Value Contract
+                                    </span>
+                                </div>
+                                
+                                {/* Progress Bar */}
+                                <div className="flex w-full h-2 bg-gray-700 rounded-full overflow-hidden mb-4">
+                                    {milestones.map((m, i) => (
+                                        <div 
+                                            key={i} 
+                                            className={`h-full transition-all ${m.status === 'RELEASED' ? 'bg-green-500' : 'bg-gray-600'}`} 
+                                            style={{ width: `${m.percentage}%`, borderRight: '1px solid black' }}
+                                        ></div>
+                                    ))}
+                                </div>
+
                                 <div className="space-y-2">
                                     {milestones.map((m, idx) => (
-                                        <div key={m.id} className="flex justify-between items-center bg-white/5 p-2 rounded">
+                                        <div key={m.id} className={`flex justify-between items-center p-3 rounded transition-colors ${m.status === 'RELEASED' ? 'bg-green-500/10 border border-green-500/30' : 'bg-white/5 border border-white/5'}`}>
                                             <div>
-                                                <div className="text-xs text-gray-300">{m.name} ({m.percentage}%)</div>
-                                                <div className="font-bold text-neon-cyan">{m.amount} Pi</div>
+                                                <div className="text-xs font-bold text-white">{m.name} ({m.percentage}%)</div>
+                                                <div className="font-mono text-xs text-gray-400">{m.amount} Pi</div>
                                             </div>
                                             {m.status === 'RELEASED' ? (
-                                                <span className="text-xs text-green-400 font-bold">PAID ✓</span>
+                                                <div className="flex items-center gap-1 text-xs text-green-400 font-bold">
+                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
+                                                    RELEASED
+                                                </div>
                                             ) : (
                                                 <button 
                                                     onClick={() => handleReleaseMilestone(idx)}
-                                                    className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white rounded text-xs font-bold"
+                                                    className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded text-xs font-bold shadow hover:shadow-green-500/20 transition-all"
                                                 >
-                                                    Release
+                                                    Release Funds
                                                 </button>
                                             )}
                                         </div>
@@ -352,13 +367,13 @@ export const ArchitexGo: React.FC = () => {
                                 SOS / Dispute
                             </button>
                             
-                            {/* If no milestones, show single complete button. If milestones, they manage completion via release. */}
                             {milestones.length === 0 && (
                                 <button 
                                     onClick={handleComplete}
-                                    className="flex-1 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold rounded-lg shadow-lg hover:scale-[1.02] transition-all"
+                                    className="flex-1 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold rounded-lg shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
                                 >
-                                    Mark Complete & Release Funds
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                    Mark Complete & Release
                                 </button>
                             )}
                         </div>
