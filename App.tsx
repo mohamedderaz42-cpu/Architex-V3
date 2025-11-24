@@ -9,6 +9,7 @@ import { UserProfile } from './features/UserProfile';
 import { AdminPanel } from './features/AdminPanel';
 import { Messages } from './features/Messages'; // Import Messages
 import { DeFiDashboard } from './features/DeFiDashboard'; // Import DeFi
+import { BountyMarketplace } from './features/BountyMarketplace'; // Import Bounty
 import { GlassCard } from './components/GlassCard';
 import { ArchieBot } from './components/ArchieBot';
 import { initializeSession, handleAddTrustline } from './services/orchestrator';
@@ -75,8 +76,8 @@ const App: React.FC = () => {
         <nav className="flex gap-2 bg-white/5 p-1 rounded-xl backdrop-blur-md border border-white/10 flex-wrap justify-center">
           <NavItem label="Dashboard" target={ViewState.DASHBOARD} />
           <NavItem label="DeFi" target={ViewState.DEFI} />
+          <NavItem label="Bounties" target={ViewState.BOUNTIES} />
           <NavItem label="Scan" target={ViewState.SCANNER} />
-          <NavItem label="Gallery" target={ViewState.GALLERY} />
           <NavItem label="Blueprints" target={ViewState.BLUEPRINTS} />
           <NavItem label="Inbox" target={ViewState.MESSAGES} />
           <NavItem label="Wallet" target={ViewState.WALLET} />
@@ -110,6 +111,7 @@ const App: React.FC = () => {
         {view === ViewState.MESSAGES && <Messages initialContextId={activeContextId} />}
         {view === ViewState.PROFILE && session && <UserProfile session={session} />}
         {view === ViewState.DEFI && <DeFiDashboard />}
+        {view === ViewState.BOUNTIES && <BountyMarketplace />}
         
         {/* Admin Views */}
         {(view === ViewState.ADMIN_LOGIN || view === ViewState.ADMIN_PANEL) && (

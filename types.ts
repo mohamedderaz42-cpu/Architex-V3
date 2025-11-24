@@ -13,7 +13,8 @@ export enum ViewState {
   ADMIN_LOGIN = 'ADMIN_LOGIN',
   ADMIN_PANEL = 'ADMIN_PANEL',
   MESSAGES = 'MESSAGES',
-  DEFI = 'DEFI'
+  DEFI = 'DEFI',
+  BOUNTIES = 'BOUNTIES'
 }
 
 export enum NetworkType {
@@ -112,6 +113,34 @@ export interface DesignAsset {
   authorAvatar: string;
   likes: number;
   views: number;
+}
+
+// Bounty Marketplace Types
+export enum BountyStatus {
+  OPEN = 'OPEN',           // Created, Funds Escrowed
+  ASSIGNED = 'ASSIGNED',   // Designer selected
+  SUBMITTED = 'SUBMITTED', // Work uploaded for review
+  COMPLETED = 'COMPLETED', // Approved, Funds Released
+  DISPUTED = 'DISPUTED'
+}
+
+export interface Bounty {
+  id: string;
+  title: string;
+  description: string;
+  price: number; // In Pi
+  client: string; // Username
+  designer: string | null; // Username
+  status: BountyStatus;
+  deadline: number;
+  tags: string[];
+}
+
+export interface ContractPayout {
+  total: number;
+  platformFee: number;
+  designerAmount: number;
+  timestamp: number;
 }
 
 // Admin & Analytics
