@@ -66,6 +66,12 @@ export const CONTRACT_CONFIG = {
   ESCROW_WALLET: 'ARCHITEX_ESCROW_VAULT'
 };
 
+export const NFT_CONFIG = {
+  MINTING_FEE_ARTX: 100, // Cost to mint in ARTX
+  CONTRACT_ADDRESS: 'C...NFT_FACTORY_SOROBAN',
+  ROYALTY_PERCENTAGE: 5
+};
+
 export const PAYMENT_CONFIG = {
   downloadCost: 0.50, // Pi
   recipient: 'ARCHITEX_TREASURY_WALLET',

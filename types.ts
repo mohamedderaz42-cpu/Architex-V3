@@ -14,7 +14,8 @@ export enum ViewState {
   ADMIN_PANEL = 'ADMIN_PANEL',
   MESSAGES = 'MESSAGES',
   DEFI = 'DEFI',
-  BOUNTIES = 'BOUNTIES'
+  BOUNTIES = 'BOUNTIES',
+  NFT_FACTORY = 'NFT_FACTORY'
 }
 
 export enum NetworkType {
@@ -97,7 +98,7 @@ export interface AppConfig {
 }
 
 // Payment & Asset Logic
-export type AssetStatus = 'GENERATING' | 'LOCKED' | 'UNLOCKED';
+export type AssetStatus = 'GENERATING' | 'LOCKED' | 'UNLOCKED' | 'MINTED';
 
 export interface DesignAsset {
   id: string;
@@ -113,6 +114,18 @@ export interface DesignAsset {
   authorAvatar: string;
   likes: number;
   views: number;
+  nftId?: string; // If minted
+}
+
+export interface NFTMetadata {
+  tokenId: string;
+  name: string;
+  description: string;
+  image: string;
+  attributes: { trait_type: string; value: string }[];
+  mintTime: number;
+  owner: string;
+  royalty: number; // Percentage
 }
 
 // Bounty Marketplace Types
