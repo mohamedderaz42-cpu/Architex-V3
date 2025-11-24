@@ -53,6 +53,23 @@ export const stakingService = {
   },
 
   /**
+   * Check if a specific address has active stakes.
+   * Used for platform utility/discounts.
+   */
+  hasActiveStake: async (walletAddress: string): Promise<boolean> => {
+    // In a real app, verify against the blockchain ledger for the specific address.
+    // For this simulation, we check the local memory store.
+    // We assume 'CURRENT_USER' or specific usernames map to the mock session.
+    
+    // For demo purposes, we check if the global userStakes (simulating current session)
+    // has any active deposits.
+    if (userStakes.some(s => s.amount > 0)) {
+        return true;
+    }
+    return false;
+  },
+
+  /**
    * STAKE (Deposit) Contract Call
    */
   stakeTokens: async (poolId: string, amount: number): Promise<boolean> => {

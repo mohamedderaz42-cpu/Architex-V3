@@ -63,7 +63,8 @@ export const CONFIG: AppConfig = {
 
 export const CONTRACT_CONFIG = {
   PLATFORM_COMMISSION_RATE: 0.10, // 10% Protocol Fee
-  ESCROW_WALLET: 'ARCHITEX_ESCROW_VAULT'
+  ESCROW_WALLET: 'ARCHITEX_ESCROW_VAULT',
+  STAKING_DISCOUNT_RATE: 0.50 // 50% off for stakers
 };
 
 export const NFT_CONFIG = {

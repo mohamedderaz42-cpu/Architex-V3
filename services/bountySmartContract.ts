@@ -1,6 +1,8 @@
 
+
 import { Bounty, BountyStatus, ContractPayout } from "../types";
 import { CONTRACT_CONFIG } from "../constants";
+import { stakingService } from "./stakingService";
 
 // --- SECURE VAULT STORAGE (Simulated On-Chain State) ---
 // This acts as the "Smart Contract" storage slot on the blockchain.
@@ -182,14 +184,22 @@ export const bountySmartContract = {
     if (vaultRecord.state !== 'LOCKED') throw new Error("Security Alert: Funds already released or disputed");
     if (bountyLedger[idx].status !== BountyStatus.SUBMITTED) throw new Error("Contract Condition Not Met: Work not submitted");
 
-    // 3. Calculate Payouts
+    // 3. Calculate Payouts & Discounts
     const totalLocked = vaultRecord.lockedBalance;
-    const feeRate = CONTRACT_CONFIG.PLATFORM_COMMISSION_RATE;
-    const platformFee = totalLocked * feeRate;
-    const designerAmount = totalLocked - platformFee;
     const designer = bountyLedger[idx].designer;
-
     if (!designer) throw new Error("No beneficiary assigned");
+
+    // CHECK FOR STAKING UTILITY (50% Discount on Fees)
+    const isStaker = await stakingService.hasActiveStake(designer);
+    
+    let baseFeeRate = CONTRACT_CONFIG.PLATFORM_COMMISSION_RATE;
+    if (isStaker) {
+        baseFeeRate = baseFeeRate * CONTRACT_CONFIG.STAKING_DISCOUNT_RATE;
+        console.log(`[Smart Contract] 💎 STAKER DETECTED: Fee discounted by ${(CONTRACT_CONFIG.STAKING_DISCOUNT_RATE * 100)}%`);
+    }
+
+    const platformFee = totalLocked * baseFeeRate;
+    const designerAmount = totalLocked - platformFee;
 
     // 4. ATOMIC STATE UPDATE
     // Mark vault as released to prevent re-entrancy
@@ -211,7 +221,8 @@ export const bountySmartContract = {
       total: totalLocked,
       platformFee,
       designerAmount,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      discountApplied: isStaker
     };
   }
 };

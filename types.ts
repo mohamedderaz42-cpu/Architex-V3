@@ -165,6 +165,7 @@ export interface ContractPayout {
   platformFee: number;
   designerAmount: number;
   timestamp: number;
+  discountApplied?: boolean;
 }
 
 // Staking Types
