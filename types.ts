@@ -6,7 +6,9 @@ export enum ViewState {
   WHITEPAPER = 'WHITEPAPER',
   SETTINGS = 'SETTINGS',
   SCANNER = 'SCANNER',
-  BLUEPRINTS = 'BLUEPRINTS'
+  BLUEPRINTS = 'BLUEPRINTS',
+  GALLERY = 'GALLERY',
+  PROFILE = 'PROFILE'
 }
 
 export enum NetworkType {
@@ -29,12 +31,20 @@ export interface TokenomicsConfig {
   };
 }
 
+export interface UserStats {
+  designsCreated: number;
+  likesReceived: number;
+  volumeTraded: number;
+}
+
 export interface UserSession {
   isAuthenticated: boolean;
   username: string;
   walletAddress: string | null;
   hasTrustline: boolean;
   balance: number;
+  avatarUrl: string;
+  stats: UserStats;
 }
 
 export interface ChatMessage {
@@ -70,6 +80,11 @@ export interface DesignAsset {
   status: AssetStatus;
   price: number;
   format: 'OBJ' | 'CAD' | 'PDF';
+  // Identity & Social
+  author: string;
+  authorAvatar: string;
+  likes: number;
+  views: number;
 }
 
 // Global Pi SDK Type Definition

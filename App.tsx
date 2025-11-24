@@ -5,6 +5,8 @@ import { Dashboard } from './features/Dashboard';
 import { Whitepaper } from './features/Whitepaper';
 import { Scanner } from './features/Scanner';
 import { BlueprintStore } from './features/BlueprintStore';
+import { Gallery } from './features/Gallery';
+import { UserProfile } from './features/UserProfile';
 import { GlassCard } from './components/GlassCard';
 import { ArchieBot } from './components/ArchieBot';
 import { initializeSession, handleAddTrustline } from './services/orchestrator';
@@ -52,7 +54,7 @@ const App: React.FC = () => {
     <div className="min-h-screen font-sans text-white p-4 pb-24 md:p-8 max-w-7xl mx-auto">
       {/* Header / Navbar */}
       <header className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView(ViewState.DASHBOARD)}>
           <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/20">
             <span className="font-display font-bold text-xl">A</span>
           </div>
@@ -62,6 +64,7 @@ const App: React.FC = () => {
         <nav className="flex gap-2 bg-white/5 p-1 rounded-xl backdrop-blur-md border border-white/10 flex-wrap justify-center">
           <NavItem label="Dashboard" target={ViewState.DASHBOARD} />
           <NavItem label="Scan" target={ViewState.SCANNER} />
+          <NavItem label="Gallery" target={ViewState.GALLERY} />
           <NavItem label="Blueprints" target={ViewState.BLUEPRINTS} />
           <NavItem label="Whitepaper" target={ViewState.WHITEPAPER} />
           <NavItem label="Wallet" target={ViewState.WALLET} />
@@ -72,10 +75,13 @@ const App: React.FC = () => {
              {loading ? (
                  <div className="h-2 w-20 bg-white/10 animate-pulse rounded"></div>
              ) : session?.isAuthenticated ? (
-                 <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-green-500/30 bg-green-500/10">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs font-mono text-green-400">{session.username}</span>
-                 </div>
+                 <button 
+                    onClick={() => setView(ViewState.PROFILE)}
+                    className={`flex items-center gap-2 px-3 py-1 rounded-full border transition-all ${view === ViewState.PROFILE ? 'bg-neon-cyan/20 border-neon-cyan' : 'bg-green-500/10 border-green-500/30 hover:bg-green-500/20'}`}
+                 >
+                    <img src={session.avatarUrl} alt="Avatar" className="w-6 h-6 rounded-full" />
+                    <span className={`text-xs font-mono ${view === ViewState.PROFILE ? 'text-neon-cyan' : 'text-green-400'}`}>{session.username}</span>
+                 </button>
              ) : (
                  <button className="text-sm text-neon-cyan">Connect Pi</button>
              )}
@@ -88,6 +94,8 @@ const App: React.FC = () => {
         {view === ViewState.WHITEPAPER && <Whitepaper />}
         {view === ViewState.SCANNER && <Scanner onNavigateToBlueprints={() => setView(ViewState.BLUEPRINTS)} />}
         {view === ViewState.BLUEPRINTS && <BlueprintStore />}
+        {view === ViewState.GALLERY && <Gallery />}
+        {view === ViewState.PROFILE && session && <UserProfile session={session} />}
         
         {view === ViewState.WALLET && (
           <div className="max-w-2xl mx-auto space-y-6">
