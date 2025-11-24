@@ -16,7 +16,8 @@ export enum ViewState {
   DEFI = 'DEFI',
   BOUNTIES = 'BOUNTIES',
   NFT_FACTORY = 'NFT_FACTORY',
-  STAKING = 'STAKING'
+  STAKING = 'STAKING',
+  LEGAL = 'LEGAL'
 }
 
 export enum NetworkType {
@@ -184,6 +185,22 @@ export interface OracleQuote {
   source: 'DEX_AGGREGATOR' | 'RESERVE_BANK' | 'MARKET_MAKER';
   confidenceScore: number; // 0.0 - 1.0
   signature?: string; // Simulating cryptographic proof
+}
+
+// Legal Engine Types
+export interface LegalAgreement {
+  id: string;
+  type: 'IP_TRANSFER' | 'SERVICE_AGREEMENT' | 'NDA';
+  parties: {
+    initiator: string;
+    counterparty: string;
+  };
+  content: string; // The full text
+  contentHash: string; // SHA-256 of content
+  status: 'DRAFT' | 'SIGNED' | 'NOTARIZED';
+  signature?: string;
+  blockchainTxId?: string; // Proof of Existence
+  timestamp: number;
 }
 
 // Admin & Analytics

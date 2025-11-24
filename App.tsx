@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ViewState, UserSession } from './types';
 import { Dashboard } from './features/Dashboard';
@@ -12,6 +13,7 @@ import { DeFiDashboard } from './features/DeFiDashboard'; // Import DeFi
 import { BountyMarketplace } from './features/BountyMarketplace'; // Import Bounty
 import { NFTFactory } from './features/NFTFactory'; // Import NFT Factory
 import { StakingVault } from './features/StakingVault'; // Import Staking
+import { LegalEngine } from './features/LegalEngine'; // Import Legal Engine
 import { GlassCard } from './components/GlassCard';
 import { ArchieBot } from './components/ArchieBot';
 import { initializeSession, handleAddTrustline } from './services/orchestrator';
@@ -79,8 +81,8 @@ const App: React.FC = () => {
           <NavItem label="Dashboard" target={ViewState.DASHBOARD} />
           <NavItem label="DeFi" target={ViewState.DEFI} />
           <NavItem label="Staking" target={ViewState.STAKING} />
-          <NavItem label="NFTs" target={ViewState.NFT_FACTORY} />
           <NavItem label="Bounties" target={ViewState.BOUNTIES} />
+          <NavItem label="Legal" target={ViewState.LEGAL} />
           <NavItem label="Store" target={ViewState.BLUEPRINTS} />
           <NavItem label="Scan" target={ViewState.SCANNER} />
           <NavItem label="Inbox" target={ViewState.MESSAGES} />
@@ -117,6 +119,7 @@ const App: React.FC = () => {
         {view === ViewState.BOUNTIES && <BountyMarketplace />}
         {view === ViewState.NFT_FACTORY && <NFTFactory />}
         {view === ViewState.STAKING && <StakingVault />}
+        {view === ViewState.LEGAL && <LegalEngine />}
         
         {/* Admin Views */}
         {(view === ViewState.ADMIN_LOGIN || view === ViewState.ADMIN_PANEL) && (
