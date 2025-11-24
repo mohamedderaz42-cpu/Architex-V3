@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../components/GlassCard';
 import { CartItem, SmartSuggestion, CheckoutResult } from '../types';
@@ -110,17 +112,30 @@ export const SmartCart: React.FC = () => {
                         </div>
                     ) : (
                         cart.map(item => (
-                            <GlassCard key={item.id} className="flex justify-between items-center">
-                                <div className="flex items-center gap-4">
+                            <GlassCard key={item.id} className="flex justify-between items-center relative overflow-hidden group">
+                                <div className="flex items-center gap-4 relative z-10">
                                     <div className="w-12 h-12 bg-white/5 rounded flex items-center justify-center font-bold text-gray-400">
                                         {item.cartQuantity}x
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-white">{item.name}</h4>
+                                        <h4 className="font-bold text-white flex items-center gap-2">
+                                            {item.name}
+                                            {item.co2PerUnit !== undefined && item.co2PerUnit < 2.0 && (
+                                                <span className="text-[8px] px-1.5 py-0.5 bg-green-500 text-black rounded font-bold" title="Low Carbon Footprint">ECO</span>
+                                            )}
+                                        </h4>
                                         <p className="text-xs text-gray-400 font-mono">{item.sku}</p>
+                                        
+                                        {item.sustainabilityTags && item.sustainabilityTags.length > 0 && (
+                                            <div className="flex gap-1 mt-1">
+                                                {item.sustainabilityTags.map((tag, i) => (
+                                                    <span key={i} className="text-[9px] text-neon-cyan border border-neon-cyan/30 px-1 rounded">{tag}</span>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                                <div className="text-right flex items-center gap-6">
+                                <div className="text-right flex items-center gap-6 relative z-10">
                                     <div>
                                         <div className="font-bold text-neon-cyan">{item.unitPrice.toFixed(2)} Pi</div>
                                         <div className="text-[10px] text-gray-500">per unit</div>
@@ -153,21 +168,27 @@ export const SmartCart: React.FC = () => {
                         {analyzing ? (
                             <div className="flex items-center gap-2 text-sm text-gray-400">
                                 <span className="w-2 h-2 bg-neon-purple rounded-full animate-ping"></span>
-                                Analyzing SKU compatibility...
+                                Analyzing SKU compatibility & carbon impact...
                             </div>
                         ) : suggestions.length > 0 ? (
                             <div className="space-y-4">
                                 {suggestions.map(s => (
-                                    <div key={s.id} className="bg-black/40 border border-white/10 rounded-lg p-3 animate-[slideUp_0.3s_ease-out]">
+                                    <div key={s.id} className={`bg-black/40 border rounded-lg p-3 animate-[slideUp_0.3s_ease-out] ${
+                                        s.type === 'ECO_UPGRADE' ? 'border-green-500/50 shadow-[0_0_10px_rgba(34,197,94,0.2)]' : 'border-white/10'
+                                    }`}>
                                         <div className="flex justify-between items-start mb-2">
                                             <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${
-                                                s.type === 'ALTERNATIVE' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'
+                                                s.type === 'ALTERNATIVE' ? 'bg-blue-500/20 text-blue-400' : 
+                                                s.type === 'ECO_UPGRADE' ? 'bg-green-500 text-black' :
+                                                'bg-purple-500/20 text-purple-400'
                                             }`}>
-                                                {s.type === 'ALTERNATIVE' ? 'CHEAPER SWAP' : 'BUNDLE DEAL'}
+                                                {s.type === 'ALTERNATIVE' ? 'CHEAPER SWAP' : s.type === 'ECO_UPGRADE' ? 'SUSTAINABILITY BOOST' : 'BUNDLE DEAL'}
                                             </span>
-                                            <span className="text-green-400 font-bold text-xs">
-                                                SAVE {s.savingsAmount.toFixed(2)} Pi
-                                            </span>
+                                            {s.savingsAmount > 0 && (
+                                                <span className="text-green-400 font-bold text-xs">
+                                                    SAVE {s.savingsAmount.toFixed(2)} Pi
+                                                </span>
+                                            )}
                                         </div>
                                         <p className="text-xs text-gray-300 mb-3 leading-relaxed">
                                             "{s.message}"
@@ -176,7 +197,7 @@ export const SmartCart: React.FC = () => {
                                             onClick={() => handleApplySuggestion(s)}
                                             className="w-full py-2 bg-white/5 hover:bg-neon-purple/20 border border-white/10 hover:border-neon-purple/50 rounded text-xs font-bold text-white transition-all"
                                         >
-                                            Apply {s.type === 'ALTERNATIVE' ? 'Swap' : 'Bundle'}
+                                            Apply {s.type === 'ECO_UPGRADE' ? 'Eco-Swap' : s.type === 'ALTERNATIVE' ? 'Swap' : 'Bundle'}
                                         </button>
                                     </div>
                                 ))}

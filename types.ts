@@ -26,7 +26,8 @@ export enum ViewState {
   DISPUTES = 'DISPUTES',
   GOVERNANCE = 'GOVERNANCE',
   CHALLENGES = 'CHALLENGES',
-  ENTERPRISE_PORTAL = 'ENTERPRISE_PORTAL' // New
+  ENTERPRISE_PORTAL = 'ENTERPRISE_PORTAL',
+  CALCULATOR = 'CALCULATOR' // New
 }
 
 export enum NetworkType {
@@ -198,6 +199,8 @@ export interface InventoryItem {
     location: string;
     lowStockThreshold: number;
     lastUpdated: number;
+    sustainabilityTags?: string[]; // New: Eco tags
+    co2PerUnit?: number; // New: kg CO2 per unit
 }
 
 export interface LedgerEntry {
@@ -245,12 +248,13 @@ export interface CartItem extends InventoryItem {
 
 export interface SmartSuggestion {
     id: string;
-    type: 'ALTERNATIVE' | 'BUNDLE';
+    type: 'ALTERNATIVE' | 'BUNDLE' | 'ECO_UPGRADE';
     originalItemId?: string; // If swapping
     suggestedItem: InventoryItem;
     message: string;
     savingsAmount: number; // In Pi
     savingsPercent: number;
+    co2Reduction?: number; // Kg CO2 saved
 }
 
 export interface CheckoutResult {

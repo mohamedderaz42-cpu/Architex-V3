@@ -9,6 +9,8 @@
 
 
 
+
+
 import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult, Order, OrderStatus, ServiceProviderProfile, ArbitratorProfile, Dispute, Bounty, BountyStatus, TrustProfile, DesignChallenge, EnterpriseProfile, EnterpriseMember } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
 import { visionAdapter } from "./vision/VisionAdapter";
@@ -57,11 +59,11 @@ let mockVendorProfile: VendorApplication = {
 // Mock Inventory Data
 // NOTE: inv_1 quantity set to 2 to trigger conflict with default cart (which requests 5)
 let mockInventory: InventoryItem[] = [
-    { id: 'inv_1', sku: 'MAT-PLA-001', name: 'PLA Filament (High Grade)', category: 'MATERIAL', quantity: 2, unitPrice: 2.50, location: 'Warehouse A', lowStockThreshold: 10, lastUpdated: Date.now() },
-    { id: 'inv_1_eco', sku: 'MAT-ECO-001', name: 'PLA Eco-Recycled', category: 'MATERIAL', quantity: 100, unitPrice: 1.50, location: 'Warehouse A', lowStockThreshold: 10, lastUpdated: Date.now() },
-    { id: 'inv_2', sku: 'KIT-HAB-SML', name: 'Micro-Habitat Kit', category: 'KIT', quantity: 8, unitPrice: 150.00, location: 'Warehouse B', lowStockThreshold: 15, lastUpdated: Date.now() },
-    { id: 'inv_2_b', sku: 'ACC-SOL-PNL', name: 'Solar Cell Add-on', category: 'MERCH', quantity: 50, unitPrice: 25.00, location: 'Warehouse B', lowStockThreshold: 5, lastUpdated: Date.now() },
-    { id: 'inv_3', sku: 'TOOL-SCN-HND', name: 'Handheld 3D Scanner', category: 'TOOL', quantity: 3, unitPrice: 450.00, location: 'Secure Vault', lowStockThreshold: 2, lastUpdated: Date.now() }
+    { id: 'inv_1', sku: 'MAT-PLA-001', name: 'PLA Filament (High Grade)', category: 'MATERIAL', quantity: 2, unitPrice: 2.50, location: 'Warehouse A', lowStockThreshold: 10, lastUpdated: Date.now(), sustainabilityTags: ['Standard'], co2PerUnit: 4.5 },
+    { id: 'inv_1_eco', sku: 'MAT-ECO-001', name: 'PLA Eco-Recycled', category: 'MATERIAL', quantity: 100, unitPrice: 1.50, location: 'Warehouse A', lowStockThreshold: 10, lastUpdated: Date.now(), sustainabilityTags: ['Recycled', 'Biodegradable'], co2PerUnit: 1.2 },
+    { id: 'inv_2', sku: 'KIT-HAB-SML', name: 'Micro-Habitat Kit', category: 'KIT', quantity: 8, unitPrice: 150.00, location: 'Warehouse B', lowStockThreshold: 15, lastUpdated: Date.now(), sustainabilityTags: ['Modular'], co2PerUnit: 150 },
+    { id: 'inv_2_b', sku: 'ACC-SOL-PNL', name: 'Solar Cell Add-on', category: 'MERCH', quantity: 50, unitPrice: 25.00, location: 'Warehouse B', lowStockThreshold: 5, lastUpdated: Date.now(), sustainabilityTags: ['Renewable Energy'], co2PerUnit: 0.0 },
+    { id: 'inv_3', sku: 'TOOL-SCN-HND', name: 'Handheld 3D Scanner', category: 'TOOL', quantity: 3, unitPrice: 450.00, location: 'Secure Vault', lowStockThreshold: 2, lastUpdated: Date.now(), sustainabilityTags: [], co2PerUnit: 12.0 }
 ];
 
 // Mock Cart State
@@ -653,13 +655,38 @@ export const dalGetSmartSuggestions = async (): Promise<SmartSuggestion[]> => {
                 });
             }
         }
+
+        // 3. ECO-FRIENDLY UPGRADE CHECK (Sustainability Priority)
+        // If item has high CO2 footprint, check for lower CO2 alternative in same category
+        if (cartItem.co2PerUnit && cartItem.co2PerUnit > 3.0) {
+            const betterEco = mockInventory.find(i => 
+                i.category === cartItem.category && 
+                i.id !== cartItem.id && 
+                i.co2PerUnit !== undefined && 
+                i.co2PerUnit < cartItem.co2PerUnit
+            );
+
+            if (betterEco) {
+                const co2Saved = (cartItem.co2PerUnit - betterEco.co2PerUnit!) * cartItem.cartQuantity;
+                suggestions.push({
+                    id: `eco_upg_${cartItem.id}`,
+                    type: 'ECO_UPGRADE',
+                    originalItemId: cartItem.id,
+                    suggestedItem: betterEco,
+                    message: `🌱 Sustainability Alert: Switching to ${betterEco.name} reduces carbon footprint by ${co2Saved.toFixed(1)}kg CO2.`,
+                    savingsAmount: 0, // Might cost same or more, but saves planet
+                    savingsPercent: 0,
+                    co2Reduction: co2Saved
+                });
+            }
+        }
     });
 
     return suggestions;
 };
 
 export const dalApplySuggestion = async (suggestion: SmartSuggestion): Promise<void> => {
-    if (suggestion.type === 'ALTERNATIVE' && suggestion.originalItemId) {
+    if ((suggestion.type === 'ALTERNATIVE' || suggestion.type === 'ECO_UPGRADE') && suggestion.originalItemId) {
         // Find quantity of original item
         const original = mockCart.find(i => i.id === suggestion.originalItemId);
         if (original) {
