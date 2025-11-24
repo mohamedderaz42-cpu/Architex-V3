@@ -25,7 +25,8 @@ export enum ViewState {
   SERVICES = 'SERVICES',
   DISPUTES = 'DISPUTES',
   GOVERNANCE = 'GOVERNANCE',
-  CHALLENGES = 'CHALLENGES' // New: Design Challenges
+  CHALLENGES = 'CHALLENGES',
+  ENTERPRISE_PORTAL = 'ENTERPRISE_PORTAL' // New
 }
 
 export enum NetworkType {
@@ -79,6 +80,7 @@ export interface UserSession {
   role?: 'USER' | 'PROVIDER' | 'ARBITRATOR';
   trustProfile?: TrustProfile;
   votingPower?: number; // Calculated: Staked + (TrustScore * Multiplier)
+  enterpriseId?: string; // Link to enterprise profile
 }
 
 export interface ChatMessage {
@@ -233,6 +235,7 @@ export interface Order {
     shippingAddress: string;
     trackingNumber?: string;
     payoutStatus?: 'ESCROWED' | 'RELEASED'; // Status of funds
+    isBulkOrder?: boolean; // B2B flag
 }
 
 // Smart Cart Types
@@ -406,6 +409,28 @@ export interface DesignChallenge {
     thumbnailUrl: string;
 }
 
+// Enterprise Types (New)
+export type EnterpriseRole = 'ADMIN' | 'MANAGER' | 'ACCOUNTANT' | 'DESIGNER';
+
+export interface EnterpriseMember {
+    id: string;
+    username: string;
+    role: EnterpriseRole;
+    spendingLimit: number; // Monthly limit
+    spentThisMonth: number;
+}
+
+export interface EnterpriseProfile {
+    id: string;
+    name: string;
+    taxId: string;
+    mainWallet: string;
+    members: EnterpriseMember[];
+    creditLine: number;
+    negotiatedCommission: number; // 0.05 to 0.08 (5-8%)
+    tier: 'GOLD' | 'PLATINUM';
+}
+
 // Oracle Types
 export interface OracleQuote {
   pair: string; // e.g., 'ARTX/Pi'
@@ -463,6 +488,7 @@ export interface BotConfig {
   maintenanceIntervalMs: number;
   minTreasuryBalance: number;
   autoRebalance: boolean;
+  b2bCommissionRate: number; // 0.05 - 0.08
 }
 
 // Security & Fuzzing

@@ -7,7 +7,9 @@
 
 
 
-import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult, Order, OrderStatus, ServiceProviderProfile, ArbitratorProfile, Dispute, Bounty, BountyStatus, TrustProfile, DesignChallenge } from "../types";
+
+
+import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult, Order, OrderStatus, ServiceProviderProfile, ArbitratorProfile, Dispute, Bounty, BountyStatus, TrustProfile, DesignChallenge, EnterpriseProfile, EnterpriseMember } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
 import { visionAdapter } from "./vision/VisionAdapter";
 import { trustScoreService } from "./trustScoreService";
@@ -27,6 +29,22 @@ const CURRENT_USER_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d
 // Mock User State (Mutable for Demo)
 let mockUserBalance = 0;
 let mockUserTier: UserTier = 'FREE';
+
+// Mock Enterprise State
+let mockEnterprise: EnterpriseProfile = {
+    id: 'ent_mega_corp',
+    name: 'MegaCorp Structures',
+    taxId: 'EIN-99-88221',
+    mainWallet: 'G...MEGACORP_MAIN',
+    creditLine: 50000,
+    negotiatedCommission: 0.06, // 6% negotiated B2B rate
+    tier: 'PLATINUM',
+    members: [
+        { id: 'user_1', username: 'PiUser_Alpha', role: 'MANAGER', spendingLimit: 10000, spentThisMonth: 1250 },
+        { id: 'user_2', username: 'DesignLead_X', role: 'DESIGNER', spendingLimit: 2000, spentThisMonth: 1500 },
+        { id: 'user_3', username: 'CFO_Bot', role: 'ACCOUNTANT', spendingLimit: 0, spentThisMonth: 0 },
+    ]
+};
 
 // Mock Vendor State
 let mockVendorProfile: VendorApplication = {
@@ -336,7 +354,8 @@ export const dalGetAccountInfo = async (): Promise<UserSession> => {
     tier: mockUserTier,
     role: 'USER',
     trustProfile,
-    votingPower
+    votingPower,
+    enterpriseId: 'ent_mega_corp' // Linked to mock enterprise
   };
 };
 
@@ -868,4 +887,61 @@ export const dalSubmitToChallenge = async (challengeId: string, designId: string
         return true;
     }
     return false;
+};
+
+// --- Enterprise Methods ---
+
+export const dalGetEnterpriseProfile = async (enterpriseId: string): Promise<EnterpriseProfile> => {
+    return mockEnterprise; // For demo, return single mock
+};
+
+export const dalAddEnterpriseUser = async (username: string, role: EnterpriseMember['role'], limit: number): Promise<void> => {
+    await new Promise(r => setTimeout(r, 800));
+    const newUser: EnterpriseMember = {
+        id: `user_${Date.now()}`,
+        username,
+        role,
+        spendingLimit: limit,
+        spentThisMonth: 0
+    };
+    mockEnterprise.members.push(newUser);
+};
+
+export const dalSubmitBulkOrder = async (items: { sku: string, quantity: number }[]): Promise<Order> => {
+    await new Promise(r => setTimeout(r, 1500));
+    
+    let total = 0;
+    const cartItems: CartItem[] = [];
+
+    items.forEach(req => {
+        const invItem = mockInventory.find(i => i.sku === req.sku);
+        if (invItem) {
+            // Simple bulk discount: 10% off base price if > 50 units
+            const discount = req.quantity > 50 ? 0.9 : 1.0;
+            const itemTotal = (invItem.unitPrice * req.quantity) * discount;
+            total += itemTotal;
+            
+            cartItems.push({ ...invItem, cartQuantity: req.quantity });
+        }
+    });
+
+    // Apply B2B Commission (Simulated as a markup or included fee, usually transparency is key in B2B)
+    // Here we assume 'total' is the goods cost, and commission is derived from platform revenue config elsewhere.
+    // For simplicity, the B2B total is what the enterprise pays.
+
+    const newOrder: Order = {
+        id: `B2B-${Date.now()}`,
+        customerId: 'ent_mega_corp',
+        customerName: mockEnterprise.name,
+        items: cartItems,
+        total: total,
+        status: 'PROCESSING',
+        timestamp: Date.now(),
+        shippingAddress: 'Enterprise HQ Dock 4',
+        payoutStatus: 'ESCROWED',
+        isBulkOrder: true
+    };
+
+    mockOrders.unshift(newOrder);
+    return newOrder;
 };

@@ -1,4 +1,6 @@
 
+
+
 import { BotLog, BotConfig } from '../types';
 import { TOKENOMICS, PAYMENT_CONFIG } from '../constants';
 
@@ -17,7 +19,8 @@ class AdminBotService {
     public config: BotConfig = {
         maintenanceIntervalMs: 3000, // Speed up for UI demo
         minTreasuryBalance: 300000000, // 300M ARTX threshold
-        autoRebalance: true
+        autoRebalance: true,
+        b2bCommissionRate: 0.06 // Default 6%
     };
 
     start() {
@@ -35,6 +38,16 @@ class AdminBotService {
         this.isRunning = false;
         clearInterval(this.intervalId);
         this.log("SYSTEM", "Bot shutdown sequence complete.", "WARNING");
+    }
+
+    // New: Dynamic Config Update for B2B
+    updateB2BConfig(newRate: number) {
+        if (newRate < 0.05 || newRate > 0.08) {
+            this.log("CONFIG", `Rate update rejected. ${newRate} is outside safe bounds (5-8%).`, "ERROR");
+            return;
+        }
+        this.config.b2bCommissionRate = newRate;
+        this.log("CONFIG", `B2B Commission Rate updated to ${(newRate * 100).toFixed(1)}%`, "SUCCESS");
     }
 
     private runRoutineChecks() {
@@ -86,7 +99,8 @@ class AdminBotService {
             { type: "DUST", desc: "Sweeping 0.00451 Pi dust from Service Gateway to Treasury." },
             { type: "GAS", desc: "Operational Wallet Gas check: 150 XLM (Nominal)." },
             { type: "SNAPSHOT", desc: "Archiving hourly ledger state to IPFS..." },
-            { type: "SECURITY", desc: "Verifying Multi-Sig Signer Integrity..." }
+            { type: "SECURITY", desc: "Verifying Multi-Sig Signer Integrity..." },
+            { type: "B2B_AUDIT", desc: `Verifying active B2B contracts at ${(this.config.b2bCommissionRate * 100).toFixed(1)}% commission.` }
         ];
         
         const task = tasks[Math.floor(Math.random() * tasks.length)];
@@ -114,7 +128,8 @@ class AdminBotService {
         return {
             isRunning: this.isRunning,
             treasury: this.treasuryBalance,
-            liquidity: this.liquidityPoolBalance
+            liquidity: this.liquidityPoolBalance,
+            b2bRate: this.config.b2bCommissionRate
         };
     }
 }
