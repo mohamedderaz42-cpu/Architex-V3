@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { ViewState, UserSession } from './types';
 import { Dashboard } from './features/Dashboard';
 import { Whitepaper } from './features/Whitepaper';
 import { Scanner } from './features/Scanner';
+import { BlueprintStore } from './features/BlueprintStore';
 import { GlassCard } from './components/GlassCard';
 import { ArchieBot } from './components/ArchieBot';
 import { initializeSession, handleAddTrustline } from './services/orchestrator';
@@ -60,6 +62,7 @@ const App: React.FC = () => {
         <nav className="flex gap-2 bg-white/5 p-1 rounded-xl backdrop-blur-md border border-white/10 flex-wrap justify-center">
           <NavItem label="Dashboard" target={ViewState.DASHBOARD} />
           <NavItem label="Scan" target={ViewState.SCANNER} />
+          <NavItem label="Blueprints" target={ViewState.BLUEPRINTS} />
           <NavItem label="Whitepaper" target={ViewState.WHITEPAPER} />
           <NavItem label="Wallet" target={ViewState.WALLET} />
         </nav>
@@ -83,7 +86,8 @@ const App: React.FC = () => {
       <main className="animate-[fadeIn_0.5s_ease-out]">
         {view === ViewState.DASHBOARD && <Dashboard />}
         {view === ViewState.WHITEPAPER && <Whitepaper />}
-        {view === ViewState.SCANNER && <Scanner />}
+        {view === ViewState.SCANNER && <Scanner onNavigateToBlueprints={() => setView(ViewState.BLUEPRINTS)} />}
+        {view === ViewState.BLUEPRINTS && <BlueprintStore />}
         
         {view === ViewState.WALLET && (
           <div className="max-w-2xl mx-auto space-y-6">

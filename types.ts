@@ -1,10 +1,12 @@
+
 // Enums must be standard enums, not const enums
 export enum ViewState {
   DASHBOARD = 'DASHBOARD',
   WALLET = 'WALLET',
   WHITEPAPER = 'WHITEPAPER',
   SETTINGS = 'SETTINGS',
-  SCANNER = 'SCANNER'
+  SCANNER = 'SCANNER',
+  BLUEPRINTS = 'BLUEPRINTS'
 }
 
 export enum NetworkType {
@@ -54,4 +56,25 @@ export interface AppConfig {
     appId: string;
     backendUrl: string;
   };
+}
+
+// Payment & Asset Logic
+export type AssetStatus = 'GENERATING' | 'LOCKED' | 'UNLOCKED';
+
+export interface DesignAsset {
+  id: string;
+  title: string;
+  timestamp: number;
+  thumbnailUrl: string; // Always visible
+  highResUrl: string | null; // Null if locked
+  status: AssetStatus;
+  price: number;
+  format: 'OBJ' | 'CAD' | 'PDF';
+}
+
+// Global Pi SDK Type Definition
+declare global {
+  interface Window {
+    Pi: any;
+  }
 }

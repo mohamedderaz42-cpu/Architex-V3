@@ -1,3 +1,4 @@
+
 import { AppConfig, NetworkType, TokenomicsConfig } from './types';
 
 // ENVIRONMENT VARIABLES
@@ -38,6 +39,12 @@ export const CONFIG: AppConfig = {
     appId: ENV.PI_APP_ID,
     backendUrl: ENV.PI_BACKEND_URL,
   }
+};
+
+export const PAYMENT_CONFIG = {
+  downloadCost: 0.50, // Pi
+  recipient: 'G...ARCHITEX_TREASURY',
+  memo: 'Architex Design Download'
 };
 
 export const UI_CONSTANTS = {

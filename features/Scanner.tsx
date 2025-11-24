@@ -1,10 +1,16 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { GlassCard } from '../components/GlassCard';
 import { visionAdapter } from '../services/vision/VisionAdapter';
+import { dalGenerateBlueprint } from '../services/dataAccessLayer';
 import { VISION_CONFIG, UI_CONSTANTS } from '../constants';
 import { ScanAnalysisResult } from '../services/vision/types';
 
-export const Scanner: React.FC = () => {
+interface ScannerProps {
+    onNavigateToBlueprints: () => void;
+}
+
+export const Scanner: React.FC<ScannerProps> = ({ onNavigateToBlueprints }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -12,6 +18,7 @@ export const Scanner: React.FC = () => {
   const [quality, setQuality] = useState<number>(0);
   const [slamState, setSlamState] = useState<string>("INITIALIZING");
   const [features, setFeatures] = useState<string[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Speech Synthesis Helper
   const speak = (text: string) => {
@@ -62,7 +69,7 @@ export const Scanner: React.FC = () => {
 
   // Guided Scanning Loop
   useEffect(() => {
-    if (!isScanning) return;
+    if (!isScanning || isGenerating) return;
 
     const intervalId = setInterval(async () => {
       if (videoRef.current && canvasRef.current) {
@@ -92,8 +99,7 @@ export const Scanner: React.FC = () => {
           setFeatures(result.featuresDetected);
 
           // Audio Feedback (Only if instruction changes or is critical)
-          if (result.instruction) {
-             // Basic debounce logic could go here, but speak() cancels previous anyway
+          if (result.instruction && Math.random() > 0.7) { // Reduce chattiness
              speak(result.instruction);
           }
 
@@ -105,7 +111,27 @@ export const Scanner: React.FC = () => {
     }, VISION_CONFIG.scanIntervalMs);
 
     return () => clearInterval(intervalId);
-  }, [isScanning]);
+  }, [isScanning, isGenerating]);
+
+  const handleGenerate = async () => {
+      if (quality < 0.3) {
+          alert("Scan quality too low. Please stabilize.");
+          return;
+      }
+      setIsScanning(false);
+      setIsGenerating(true);
+      speak("Processing scan data. Generating structural blueprint.");
+      
+      try {
+          await dalGenerateBlueprint({ features });
+          setIsGenerating(false);
+          onNavigateToBlueprints();
+      } catch (e) {
+          setIsScanning(true);
+          setIsGenerating(false);
+          alert("Generation Failed.");
+      }
+  };
 
   return (
     <div className="relative h-[80vh] w-full rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl">
@@ -162,14 +188,32 @@ export const Scanner: React.FC = () => {
                 </div>
             )}
             
-            <GlassCard className="!bg-black/60 backdrop-blur-xl border-neon-cyan/30">
-                <div className="text-center">
-                    <p className="text-gray-400 text-xs uppercase tracking-widest mb-2">AI Guidance</p>
-                    <p className="text-xl md:text-2xl font-display font-bold text-white animate-pulse">
-                        "{guidance}"
-                    </p>
-                </div>
-            </GlassCard>
+            <div className="flex items-end justify-between gap-4 pointer-events-auto">
+                 <GlassCard className="!bg-black/60 backdrop-blur-xl border-neon-cyan/30 flex-1">
+                    <div className="text-center">
+                        <p className="text-gray-400 text-xs uppercase tracking-widest mb-2">AI Guidance</p>
+                        <p className="text-xl md:text-2xl font-display font-bold text-white animate-pulse">
+                            "{guidance}"
+                        </p>
+                    </div>
+                </GlassCard>
+
+                {/* Generate Button */}
+                <button 
+                    onClick={handleGenerate}
+                    disabled={isGenerating || quality < 0.3}
+                    className="h-full px-6 py-4 bg-gradient-to-t from-neon-purple to-indigo-600 rounded-xl font-bold text-white shadow-[0_0_20px_rgba(124,58,237,0.5)] hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
+                >
+                    {isGenerating ? (
+                        <span className="animate-pulse">PROCESSING...</span>
+                    ) : (
+                        <div className="flex flex-col items-center">
+                            <span className="text-2xl">⚡</span>
+                            <span className="text-xs mt-1">GENERATE</span>
+                        </div>
+                    )}
+                </button>
+            </div>
         </div>
       </div>
     </div>
