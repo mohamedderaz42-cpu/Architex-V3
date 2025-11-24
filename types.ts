@@ -204,6 +204,27 @@ export interface ApiUsageStats {
   history: { time: string; requests: number; latency: number }[];
 }
 
+// Security & Fuzzing
+export interface FuzzTestResult {
+  id: string;
+  timestamp: number;
+  targetContract: 'STAKING' | 'BOUNTY' | 'NFT' | 'ORACLE';
+  functionName: string;
+  inputVector: string;
+  status: 'PASS' | 'FAIL' | 'VULNERABILITY'; // PASS = handled correctly (even if error thrown), FAIL = crash/unexpected, VULN = exploit success
+  details: string;
+  latencyMs: number;
+}
+
+export interface SecurityAuditReport {
+  campaignId: string;
+  startTime: number;
+  totalTests: number;
+  vulnerabilitiesFound: number;
+  coverage: number; // Percentage
+  logs: FuzzTestResult[];
+}
+
 // DeFi Types
 export interface OrderBookEntry {
   price: string;

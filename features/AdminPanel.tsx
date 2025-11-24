@@ -1,21 +1,28 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { GlassCard } from '../components/GlassCard';
 import { adminAuth, getSystemTelemetry } from '../services/adminService';
-import { ApiUsageStats, ViewState } from '../types';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
+import { ApiUsageStats, ViewState, FuzzTestResult } from '../types';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, PieChart, Pie, Cell } from 'recharts';
 import { UI_CONSTANTS } from '../constants';
+import { fuzzTestingService } from '../services/fuzzTestingService';
 
 interface AdminPanelProps {
   onLogout: () => void;
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
-  const [step, setStep] = useState<'LOGIN' | 'MFA' | 'DASHBOARD'>('LOGIN');
+  const [step, setStep] = useState<'LOGIN' | 'MFA' | 'DASHBOARD' | 'AUDIT'>('LOGIN');
   const [password, setPassword] = useState('');
   const [mfaCode, setMfaCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [stats, setStats] = useState<ApiUsageStats[]>([]);
+  
+  // Audit State
+  const [auditRunning, setAuditRunning] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<FuzzTestResult[]>([]);
+  const logsEndRef = useRef<HTMLDivElement>(null);
 
   // Telemetry Polling
   useEffect(() => {
@@ -29,6 +36,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
       return () => clearInterval(interval);
     }
   }, [step]);
+
+  // Auto-scroll logs
+  useEffect(() => {
+      if (step === 'AUDIT') {
+          logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+  }, [auditLogs, step]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,6 +73,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
     } else {
       setError('Invalid Authentication Code');
     }
+  };
+
+  const startFuzzCampaign = async () => {
+      setAuditRunning(true);
+      setAuditLogs([]);
+      
+      const handleResult = (res: FuzzTestResult) => {
+          setAuditLogs(prev => [...prev, res]);
+      };
+
+      // Run parallel campaigns
+      await Promise.all([
+          fuzzTestingService.fuzzStakingContract(10, handleResult),
+          fuzzTestingService.fuzzBountyContract(8, handleResult),
+          fuzzTestingService.fuzzNFTContract(5, handleResult)
+      ]);
+
+      setAuditRunning(false);
   };
 
   if (step === 'LOGIN') {
@@ -135,6 +167,94 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
     );
   }
 
+  if (step === 'AUDIT') {
+      const vulnCount = auditLogs.filter(l => l.status === 'VULNERABILITY').length;
+      const passCount = auditLogs.filter(l => l.status === 'PASS').length;
+      const failCount = auditLogs.filter(l => l.status === 'FAIL').length;
+      const total = auditLogs.length;
+
+      const pieData = [
+          { name: 'Passed', value: passCount },
+          { name: 'Failed', value: failCount },
+          { name: 'Vuln', value: vulnCount }
+      ];
+      const COLORS = ['#22c55e', '#ef4444', '#f59e0b'];
+
+      return (
+        <div className="space-y-6 animate-[fadeIn_0.5s_ease-out]">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h1 className="text-3xl font-display font-bold text-white">Smart Contract Audit</h1>
+                    <p className="text-gray-400 text-sm font-mono mt-1">AUTOMATED FUZZ TESTING ENGINE</p>
+                </div>
+                <div className="flex gap-2">
+                    <button onClick={() => setStep('DASHBOARD')} className="px-4 py-2 border border-white/10 rounded hover:bg-white/5 text-gray-300">
+                        Back to Dashboard
+                    </button>
+                    <button 
+                        onClick={startFuzzCampaign}
+                        disabled={auditRunning}
+                        className="px-6 py-2 bg-gradient-to-r from-orange-600 to-red-600 text-white font-bold rounded hover:shadow-lg disabled:opacity-50 flex items-center gap-2"
+                    >
+                        {auditRunning ? <span className="animate-spin">⚙️</span> : '⚡'}
+                        {auditRunning ? 'Fuzzing...' : 'Start Campaign'}
+                    </button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Stats */}
+                <GlassCard title="Campaign Coverage" className="flex items-center justify-center flex-col">
+                    {total > 0 ? (
+                        <>
+                            <div className="h-40 w-full">
+                                <ResponsiveContainer>
+                                    <PieChart>
+                                        <Pie data={pieData} innerRadius={40} outerRadius={60} paddingAngle={5} dataKey="value">
+                                            {pieData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
+                                        </Pie>
+                                        <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: 'none' }} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="flex gap-4 text-xs mt-4">
+                                <div className="flex items-center gap-1"><div className="w-2 h-2 bg-green-500 rounded-full"></div>PASS: {passCount}</div>
+                                <div className="flex items-center gap-1"><div className="w-2 h-2 bg-red-500 rounded-full"></div>ERR: {failCount}</div>
+                                <div className="flex items-center gap-1"><div className="w-2 h-2 bg-orange-500 rounded-full"></div>VULN: {vulnCount}</div>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="text-gray-500 text-sm italic py-10">No audit data available</div>
+                    )}
+                </GlassCard>
+
+                {/* Terminal */}
+                <div className="lg:col-span-2 bg-black/80 rounded-xl border border-white/10 font-mono text-xs p-4 h-96 overflow-y-auto shadow-inner">
+                    <div className="text-gray-500 mb-2 border-b border-gray-800 pb-2 sticky top-0 bg-black/80">
+                        > ./architex-security-cli --fuzz-all --threads=4
+                    </div>
+                    {auditLogs.map((log) => (
+                        <div key={log.id} className="mb-1 flex gap-2 break-all">
+                            <span className="text-gray-600">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                            <span className={`font-bold w-16 ${
+                                log.status === 'PASS' ? 'text-green-500' : 
+                                log.status === 'FAIL' ? 'text-red-500' : 'text-orange-500'
+                            }`}>
+                                [{log.status}]
+                            </span>
+                            <span className="text-neon-cyan">{log.targetContract}::{log.functionName}</span>
+                            <span className="text-gray-400">INPUT: {log.inputVector}</span>
+                            <span className="text-gray-500"> -> {log.details}</span>
+                        </div>
+                    ))}
+                    {auditRunning && <div className="animate-pulse text-neon-cyan mt-2">> Executing Randomized Vectors...</div>}
+                    <div ref={logsEndRef} />
+                </div>
+            </div>
+        </div>
+      );
+  }
+
   // Dashboard View
   return (
     <div className="space-y-6 animate-[fadeIn_0.5s_ease-out]">
@@ -143,12 +263,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
             <h1 className="text-3xl font-display font-bold text-white">System Administration</h1>
             <p className="text-gray-400 text-sm font-mono mt-1">SECURE CONNECTION ESTABLISHED</p>
         </div>
-        <button 
-            onClick={onLogout}
-            className="px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded hover:bg-red-500/30 transition-colors text-sm"
-        >
-            Terminate Session
-        </button>
+        <div className="flex gap-2">
+            <button 
+                onClick={() => setStep('AUDIT')}
+                className="px-4 py-2 bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded hover:bg-orange-500/30 transition-colors text-sm font-bold"
+            >
+                Security Audit
+            </button>
+            <button 
+                onClick={onLogout}
+                className="px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded hover:bg-red-500/30 transition-colors text-sm"
+            >
+                Terminate Session
+            </button>
+        </div>
       </div>
 
       {/* KPI Cards */}
