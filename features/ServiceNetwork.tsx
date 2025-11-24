@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../components/GlassCard';
 import { dalGetServiceProviders, dalGetArbitrators } from '../services/dataAccessLayer';
@@ -58,6 +60,17 @@ export const ServiceNetwork: React.FC = () => {
                                         )}
                                     </div>
                                     <p className="text-xs text-neon-cyan font-mono uppercase">{prov.role}</p>
+                                    
+                                    {/* Soulbound Token Badges */}
+                                    {prov.soulboundTokens && prov.soulboundTokens.length > 0 && (
+                                        <div className="flex gap-1 mt-1">
+                                            {prov.soulboundTokens.map(sbt => (
+                                                <span key={sbt.id} className="cursor-help" title={sbt.name + ': ' + sbt.criteria}>
+                                                    {sbt.icon}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             
@@ -76,8 +89,11 @@ export const ServiceNetwork: React.FC = () => {
                                 <div className="text-sm">
                                     <span className="font-bold text-white">{prov.hourlyRate} Pi</span> / hr
                                 </div>
-                                <div className="text-xs text-yellow-500 font-bold">
-                                    ★ {prov.reputationScore}/100
+                                <div className="text-right">
+                                    <div className="text-xs text-yellow-500 font-bold">
+                                        ★ {prov.reputationScore}/100
+                                    </div>
+                                    <div className="text-[10px] text-gray-500">{prov.jobsCompleted} Jobs</div>
                                 </div>
                             </div>
                             

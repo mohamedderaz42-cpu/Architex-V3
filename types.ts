@@ -1,5 +1,7 @@
 
 
+
+
 // Enums must be standard enums, not const enums
 export enum ViewState {
   DASHBOARD = 'DASHBOARD',
@@ -163,6 +165,8 @@ export interface DesignAsset {
       lng: number;
       timezone: string;
   };
+  // AI Compliance
+  zoningWarnings?: string[]; 
 }
 
 export interface NFTMetadata {
@@ -312,6 +316,14 @@ export interface Certification {
     verified: boolean;
 }
 
+export interface SoulboundToken {
+    id: string;
+    name: string;
+    icon: string; // Emoji or URL
+    issuedAt: number;
+    criteria: string; // e.g. "50 Jobs Completed"
+}
+
 export interface ServiceProviderProfile {
     id: string;
     username: string;
@@ -321,6 +333,8 @@ export interface ServiceProviderProfile {
     reputationScore: number; // 0-100 unforgeable rating
     verifiedId: boolean;
     certifications: Certification[];
+    soulboundTokens?: SoulboundToken[]; // Identity Badges
+    jobsCompleted?: number;
     hourlyRate: number;
     location: string;
     available: boolean;
@@ -375,6 +389,15 @@ export interface ServiceBid {
     distanceKm: number;
 }
 
+export interface Milestone {
+    id: string;
+    name: string;
+    amount: number;
+    percentage: number;
+    status: 'LOCKED' | 'RELEASED';
+    requiresClientApproval: boolean;
+}
+
 export interface ServiceRequest {
     id: string;
     clientId: string;
@@ -388,6 +411,7 @@ export interface ServiceRequest {
     selectedProviderId?: string;
     bids: ServiceBid[];
     createdAt: number;
+    milestones?: Milestone[]; // For high value contracts
 }
 
 // Staking Types

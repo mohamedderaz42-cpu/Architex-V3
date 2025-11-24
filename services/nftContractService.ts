@@ -1,4 +1,5 @@
-import { DesignAsset, NFTMetadata } from "../types";
+
+import { DesignAsset, NFTMetadata, SoulboundToken } from "../types";
 import { NFT_CONFIG } from "../constants";
 
 // Simulation of Soroban Smart Contract interaction
@@ -61,5 +62,22 @@ export const nftContractService = {
     };
 
     return metadata;
+  },
+
+  /**
+   * SOULBOUND IDENTITY MINTING
+   * Mints non-transferable badges based on on-chain merit.
+   */
+  issueSoulboundBadge: async (userAddress: string, type: 'MASTER_ARTISAN' | 'VERIFIED_ARCHITECT'): Promise<SoulboundToken> => {
+      console.log(`[Smart Contract] Identity Verification: Minting SBT for ${userAddress}`);
+      await new Promise(r => setTimeout(r, 1000));
+
+      return {
+          id: `SBT-${Date.now()}`,
+          name: type === 'MASTER_ARTISAN' ? 'Master Artisan' : 'Verified Architect',
+          icon: type === 'MASTER_ARTISAN' ? '🛠️' : '🏛️',
+          issuedAt: Date.now(),
+          criteria: type === 'MASTER_ARTISAN' ? '50 Verified Jobs + 4.8 Avg Rating' : 'KYC + Portfolio Audit'
+      };
   }
 };

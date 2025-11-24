@@ -1,25 +1,43 @@
 
+
+
 import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../components/GlassCard';
-import { ServiceRequest, ServiceCategory, ServiceBid } from '../types';
+import { ServiceRequest, ServiceCategory, ServiceBid, Milestone } from '../types';
 import { dalCreateServiceRequest, dalGetActiveServiceRequest, dalAcceptBid, dalCompleteServiceRequest } from '../services/dataAccessLayer';
 import { serviceEscrowContract } from '../services/serviceEscrowContract';
 import { piService } from '../services/piService';
+import { offlineService } from '../services/offlineService';
 
 export const ArchitexGo: React.FC = () => {
     const [activeRequest, setActiveRequest] = useState<ServiceRequest | null>(null);
     const [viewMode, setViewMode] = useState<'SELECT' | 'REQUESTING' | 'ACTIVE'>('SELECT');
+    const [milestones, setMilestones] = useState<Milestone[]>([]);
     
     // Form
     const [category, setCategory] = useState<ServiceCategory | null>(null);
     const [desc, setDesc] = useState('');
     const [location, setLocation] = useState('Current Location (Mock)');
     const [loading, setLoading] = useState(false);
+    
+    // Offline State
+    const [isOffline, setIsOffline] = useState(!offlineService.isOnline());
 
     useEffect(() => {
         checkActive();
         const interval = setInterval(checkActive, 3000); // Poll for bids/status
-        return () => clearInterval(interval);
+        
+        // Listen to network status
+        const handleOnline = () => setIsOffline(false);
+        const handleOffline = () => setIsOffline(true);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
     }, []);
 
     const checkActive = async () => {
@@ -27,6 +45,12 @@ export const ArchitexGo: React.FC = () => {
         if (req) {
             setActiveRequest(req);
             setViewMode(req.status === 'BIDDING' ? 'REQUESTING' : 'ACTIVE');
+            
+            // Check for milestones in contract state
+            if (req.status === 'IN_PROGRESS') {
+                const ms = serviceEscrowContract.getMilestones(req.id);
+                setMilestones(ms);
+            }
         } else if (viewMode === 'ACTIVE' || viewMode === 'REQUESTING') {
             // Reset if cancelled/completed externally
             if (activeRequest?.status === 'COMPLETED') return; // Keep showing completion
@@ -37,6 +61,10 @@ export const ArchitexGo: React.FC = () => {
 
     const handleRequest = async () => {
         if (!category || !desc) return;
+        if (isOffline) {
+            alert("Cannot create new requests while offline. Please reconnect.");
+            return;
+        }
         setLoading(true);
         const req = await dalCreateServiceRequest(category, desc, location);
         setActiveRequest(req);
@@ -67,6 +95,28 @@ export const ArchitexGo: React.FC = () => {
             );
         } catch (e) {
             console.error(e);
+        }
+    };
+
+    const handleReleaseMilestone = async (index: number) => {
+        if (!activeRequest) return;
+        try {
+            await serviceEscrowContract.releaseMilestone(activeRequest.id, index);
+            // Re-fetch milestones state
+            const ms = serviceEscrowContract.getMilestones(activeRequest.id);
+            setMilestones([...ms]); // Force re-render
+            
+            // If all milestones released, complete job
+            const allReleased = ms.every(m => m.status === 'RELEASED');
+            if (allReleased) {
+                await dalCompleteServiceRequest(activeRequest.id);
+                alert("All Milestones Released. Job Completed.");
+                setViewMode('SELECT');
+            } else {
+                alert("Milestone Payment Released.");
+            }
+        } catch (e: any) {
+            alert(e.message);
         }
     };
 
@@ -128,6 +178,13 @@ export const ArchitexGo: React.FC = () => {
 
     return (
         <div className="space-y-6 animate-[fadeIn_0.5s_ease-out]">
+            {/* Offline Banner */}
+            {isOffline && (
+                <div className="bg-orange-500 text-black text-center font-bold text-xs py-2 rounded animate-pulse">
+                    ⚠️ OFFLINE MODE: Functionality Limited. Changes will sync when online.
+                </div>
+            )}
+
             <div className="flex justify-between items-center">
                 <div>
                     <h2 className="text-3xl font-display font-bold text-white">Architex Go</h2>
@@ -260,16 +317,32 @@ export const ArchitexGo: React.FC = () => {
                             </button>
                         </div>
 
-                        <div className="p-4 bg-black/40 rounded-lg mb-6">
-                            <div className="flex justify-between text-sm text-gray-400 mb-2">
-                                <span>Provider</span>
-                                <span className="text-white">Felix Construction</span>
+                        {/* Milestones View (If applicable) */}
+                        {milestones.length > 0 && (
+                            <div className="mb-6 p-4 bg-black/40 rounded-lg border border-white/10">
+                                <h4 className="text-sm font-bold text-white mb-3">Milestone Release Schedule</h4>
+                                <div className="space-y-2">
+                                    {milestones.map((m, idx) => (
+                                        <div key={m.id} className="flex justify-between items-center bg-white/5 p-2 rounded">
+                                            <div>
+                                                <div className="text-xs text-gray-300">{m.name} ({m.percentage}%)</div>
+                                                <div className="font-bold text-neon-cyan">{m.amount} Pi</div>
+                                            </div>
+                                            {m.status === 'RELEASED' ? (
+                                                <span className="text-xs text-green-400 font-bold">PAID ✓</span>
+                                            ) : (
+                                                <button 
+                                                    onClick={() => handleReleaseMilestone(idx)}
+                                                    className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white rounded text-xs font-bold"
+                                                >
+                                                    Release
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                            <div className="flex justify-between text-sm text-gray-400">
-                                <span>Service</span>
-                                <span className="text-white">{activeRequest.category}</span>
-                            </div>
-                        </div>
+                        )}
 
                         <div className="flex gap-4">
                             <button 
@@ -278,12 +351,16 @@ export const ArchitexGo: React.FC = () => {
                             >
                                 SOS / Dispute
                             </button>
-                            <button 
-                                onClick={handleComplete}
-                                className="flex-1 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold rounded-lg shadow-lg hover:scale-[1.02] transition-all"
-                            >
-                                Mark Complete & Release Funds
-                            </button>
+                            
+                            {/* If no milestones, show single complete button. If milestones, they manage completion via release. */}
+                            {milestones.length === 0 && (
+                                <button 
+                                    onClick={handleComplete}
+                                    className="flex-1 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold rounded-lg shadow-lg hover:scale-[1.02] transition-all"
+                                >
+                                    Mark Complete & Release Funds
+                                </button>
+                            )}
                         </div>
                     </GlassCard>
                 </div>

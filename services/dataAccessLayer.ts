@@ -1,5 +1,8 @@
 
 
+
+
+
 // ... imports ...
 import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult, Order, OrderStatus, ServiceProviderProfile, ArbitratorProfile, Dispute, Bounty, BountyStatus, TrustProfile, DesignChallenge, EnterpriseProfile, EnterpriseMember, ServiceRequest, ServiceCategory, ServiceBid } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
@@ -7,6 +10,8 @@ import { visionAdapter } from "./vision/VisionAdapter";
 import { trustScoreService } from "./trustScoreService";
 import { stakingService } from "./stakingService";
 import { systemConfigService } from "./adminService"; // Import config service
+import { offlineService } from "./offlineService"; // NEW
+import { nftContractService } from "./nftContractService"; // NEW
 
 // ... (Keep existing PI_HEADERS, AVATAR constants) ...
 const PI_HEADERS = {
@@ -232,6 +237,7 @@ const mockServiceProviders: ServiceProviderProfile[] = [
             { name: 'Licensed General Contractor', issuer: 'State Board', date: Date.now() - 31536000000, verified: true },
             { name: 'OSHA Safety Cert', issuer: 'OSHA', date: Date.now() - 15000000000, verified: true }
         ],
+        jobsCompleted: 48, // Almost ready for SBT
         hourlyRate: 85,
         location: 'California, USA',
         available: true,
@@ -249,6 +255,7 @@ const mockServiceProviders: ServiceProviderProfile[] = [
         certifications: [
             { name: 'PV Installation Pro', issuer: 'SolarEnergy Int.', date: Date.now() - 20000000000, verified: true }
         ],
+        jobsCompleted: 12,
         hourlyRate: 60,
         location: 'Nevada, USA',
         available: true,
@@ -307,43 +314,45 @@ let activeServiceRequests: ServiceRequest[] = [];
 
 // UPDATED ACCOUNT INFO FUNCTION WITH WHITELIST CHECK
 export const dalGetAccountInfo = async (): Promise<UserSession> => {
-  await new Promise(resolve => setTimeout(resolve, 800));
+  return offlineService.wrapFetch('account_info', async () => {
+      await new Promise(resolve => setTimeout(resolve, 800));
 
-  const username = 'PiUser_Alpha'; // Mock logged in user
-  const stats = {
-      designsCreated: 12,
-      likesReceived: 345,
-      volumeTraded: 15.5
-  };
+      const username = 'PiUser_Alpha'; // Mock logged in user
+      const stats = {
+          designsCreated: 12,
+          likesReceived: 345,
+          volumeTraded: 15.5
+      };
 
-  const stakes = await stakingService.getUserStakes('CURRENT_USER'); 
-  const totalStaked = stakes.reduce((sum, s) => sum + s.amount, 0);
+      const stakes = await stakingService.getUserStakes('CURRENT_USER'); 
+      const totalStaked = stakes.reduce((sum, s) => sum + s.amount, 0);
 
-  const trustProfile = trustScoreService.calculateTrustScore(
-      stats,
-      245, 
-      0, 
-      totalStaked
-  );
+      const trustProfile = trustScoreService.calculateTrustScore(
+          stats,
+          245, 
+          0, 
+          totalStaked
+      );
 
-  const votingPower = trustScoreService.calculateVotingPower(totalStaked, trustProfile.score);
-  const isWhitelisted = await systemConfigService.isUserWhitelisted(username);
+      const votingPower = trustScoreService.calculateVotingPower(totalStaked, trustProfile.score);
+      const isWhitelisted = await systemConfigService.isUserWhitelisted(username);
 
-  return {
-    isAuthenticated: true,
-    username,
-    walletAddress: 'G...ARCHITEX_USER',
-    hasTrustline: mockUserBalance > 0,
-    balance: mockUserBalance,
-    avatarUrl: CURRENT_USER_AVATAR,
-    stats,
-    tier: mockUserTier,
-    role: 'USER',
-    trustProfile,
-    votingPower,
-    enterpriseId: 'ent_mega_corp',
-    isWhitelisted // New flag
-  };
+      return {
+        isAuthenticated: true,
+        username,
+        walletAddress: 'G...ARCHITEX_USER',
+        hasTrustline: mockUserBalance > 0,
+        balance: mockUserBalance,
+        avatarUrl: CURRENT_USER_AVATAR,
+        stats,
+        tier: mockUserTier,
+        role: 'USER',
+        trustProfile,
+        votingPower,
+        enterpriseId: 'ent_mega_corp',
+        isWhitelisted
+      };
+  });
 };
 
 export const dalUpgradeTier = async (newTier: UserTier): Promise<boolean> => {
@@ -364,6 +373,15 @@ export const dalGetLiveTokenStats = async (): Promise<TokenomicsConfig> => {
 // ... [DESIGN METHODS] ...
 export const dalGenerateBlueprint = async (scanData: any): Promise<DesignAsset> => {
     await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // AI Building Code Compliance Check
+    // Mocking a check where if the design is too 'complex' or tall, it flags a warning
+    const warnings: string[] = [];
+    if (Math.random() > 0.7) {
+        warnings.push("Zoning Alert: Height exceeds local residential limit (40m).");
+        warnings.push("Setback Warning: Structure encroaches on side easement.");
+    }
+
     const newDesign: DesignAsset = {
         id: `design_${Date.now()}`,
         title: 'Generative Structural Analysis #42',
@@ -378,13 +396,19 @@ export const dalGenerateBlueprint = async (scanData: any): Promise<DesignAsset> 
         likes: 0,
         views: 0,
         installationProof: { status: 'NONE' },
-        geolocation: { lat: 40.7128, lng: -74.0060, timezone: 'America/New_York' }
+        geolocation: { lat: 40.7128, lng: -74.0060, timezone: 'America/New_York' },
+        zoningWarnings: warnings // Updated with AI flags
     };
     mockDesigns.unshift(newDesign);
     return newDesign;
 };
 
-export const dalGetUserDesigns = async (): Promise<DesignAsset[]> => { return [...mockDesigns]; };
+export const dalGetUserDesigns = async (): Promise<DesignAsset[]> => { 
+    return offlineService.wrapFetch('user_designs', async () => {
+        return [...mockDesigns]; 
+    });
+};
+
 export const dalGetPublicGallery = async (): Promise<DesignAsset[]> => { return [...mockGallery, ...mockDesigns]; };
 export const dalUnlockDesign = async (paymentId: string, designId: string): Promise<DesignAsset | null> => {
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -457,12 +481,18 @@ export const dalUpdateShippingZone = async (zone: ShippingZone): Promise<boolean
 };
 
 // ... [CART METHODS] ...
-export const dalGetCart = async (): Promise<CartItem[]> => { return [...mockCart]; };
+export const dalGetCart = async (): Promise<CartItem[]> => { 
+    return offlineService.wrapFetch('cart_items', async () => [...mockCart]);
+};
 export const dalAddToCart = async (item: InventoryItem, qty: number = 1): Promise<void> => {
     const idx = mockCart.findIndex(i => i.id === item.id);
     if (idx > -1) { mockCart[idx].cartQuantity += qty; } else { mockCart.push({ ...item, cartQuantity: qty }); }
+    offlineService.saveToCache('cart_items', mockCart); // Update cache
 };
-export const dalRemoveFromCart = async (itemId: string): Promise<void> => { mockCart = mockCart.filter(i => i.id !== itemId); };
+export const dalRemoveFromCart = async (itemId: string): Promise<void> => { 
+    mockCart = mockCart.filter(i => i.id !== itemId); 
+    offlineService.saveToCache('cart_items', mockCart);
+};
 export const dalGetSmartSuggestions = async (): Promise<SmartSuggestion[]> => {
     await new Promise(r => setTimeout(r, 600)); 
     const suggestions: SmartSuggestion[] = [];
@@ -638,7 +668,10 @@ export const dalCreateServiceRequest = async (category: ServiceCategory, desc: s
 };
 
 export const dalGetActiveServiceRequest = async (): Promise<ServiceRequest | null> => {
-    return activeServiceRequests.find(r => r.status !== 'COMPLETED' && r.status !== 'CANCELLED') || null;
+    // Wrap with offline service to handle connectivity
+    return offlineService.wrapFetch('active_service_request', async () => {
+        return activeServiceRequests.find(r => r.status !== 'COMPLETED' && r.status !== 'CANCELLED') || null;
+    });
 };
 
 export const dalGetNearbyProviders = async (category: ServiceCategory): Promise<ServiceProviderProfile[]> => {
@@ -665,6 +698,22 @@ export const dalCompleteServiceRequest = async (requestId: string): Promise<bool
     const idx = activeServiceRequests.findIndex(r => r.id === requestId);
     if (idx === -1) return false;
     
-    activeServiceRequests[idx].status = 'COMPLETED';
+    const req = activeServiceRequests[idx];
+    req.status = 'COMPLETED';
+
+    // SOULBOUND TOKEN TRIGGER
+    // If provider has > 50 jobs, issue a badge
+    if (req.selectedProviderId) {
+        const provider = mockServiceProviders.find(p => p.id === req.selectedProviderId);
+        if (provider) {
+            provider.jobsCompleted = (provider.jobsCompleted || 0) + 1;
+            if (provider.jobsCompleted >= 50) {
+                const sbt = await nftContractService.issueSoulboundBadge(provider.id, 'MASTER_ARTISAN');
+                if (!provider.soulboundTokens) provider.soulboundTokens = [];
+                provider.soulboundTokens.push(sbt);
+            }
+        }
+    }
+
     return true;
 };
