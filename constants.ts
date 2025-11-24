@@ -1,4 +1,5 @@
 
+
 import { AppConfig, NetworkType, TokenomicsConfig } from './types';
 
 // ENVIRONMENT VARIABLES
@@ -45,6 +46,26 @@ export const PAYMENT_CONFIG = {
   downloadCost: 0.50, // Pi
   recipient: 'G...ARCHITEX_TREASURY',
   memo: 'Architex Design Download'
+};
+
+export const STELLAR_CONFIG = {
+  horizonUrl: 'https://horizon-testnet.stellar.org',
+  assets: {
+    ARTX: {
+      code: 'ARTX',
+      // Using a known testnet issuer for demo purposes (e.g., a custom asset)
+      // In a real scenario, this is the Issuer Address of your token
+      issuer: 'GC4H57J66F73F57J66F73F57J66F73F57J66F73F57J66F73F57J66F7' 
+    },
+    XLM: {
+      code: 'XLM',
+      issuer: undefined // Native
+    },
+    USDC: {
+      code: 'USDC',
+      issuer: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5' // Stellar Testnet USDC
+    }
+  }
 };
 
 export const UI_CONSTANTS = {

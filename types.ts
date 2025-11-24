@@ -12,7 +12,8 @@ export enum ViewState {
   PROFILE = 'PROFILE',
   ADMIN_LOGIN = 'ADMIN_LOGIN',
   ADMIN_PANEL = 'ADMIN_PANEL',
-  MESSAGES = 'MESSAGES'
+  MESSAGES = 'MESSAGES',
+  DEFI = 'DEFI'
 }
 
 export enum NetworkType {
@@ -129,6 +130,25 @@ export interface ApiUsageStats {
   costEstimate: number; // USD
   status: 'ONLINE' | 'DEGRADED' | 'OFFLINE';
   history: { time: string; requests: number; latency: number }[];
+}
+
+// DeFi Types
+export interface OrderBookEntry {
+  price: string;
+  amount: string;
+  total: number;
+}
+
+export interface OrderBookData {
+  bids: OrderBookEntry[];
+  asks: OrderBookEntry[];
+  spread: string;
+}
+
+export interface ChainBalance {
+  assetCode: string;
+  balance: string;
+  issuer?: string;
 }
 
 // Global Pi SDK Type Definition
