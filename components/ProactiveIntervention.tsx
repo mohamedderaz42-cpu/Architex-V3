@@ -26,7 +26,7 @@ export const ProactiveIntervention: React.FC<ProactiveInterventionProps> = ({ is
                 
                 <div className="p-4 bg-white/5 rounded-lg border border-white/10 mb-6 text-left">
                     <p className="text-gray-300 text-sm leading-relaxed">
-                        We've detected multiple manual iterations on this project. To ensure structural integrity and aesthetic cohesion, would you like to <span className="text-white font-bold">hire a professional designer</span> from the Architex DAO to complete this work?
+                        We've detected multiple manual iterations on this project. <span className="text-white font-bold">Would you like to hire a professional designer to complete this work?</span>
                     </p>
                 </div>
 

@@ -2,6 +2,7 @@
   "name": "Architex",
   "description": "A high-performance Decentralized Application (DApp) exclusively hosted within the Pi Network ecosystem, powered by Stellar Soroban smart contracts.",
   "requestFramePermissions": [
-    "microphone"
+    "microphone",
+    "camera"
   ]
 }

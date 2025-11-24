@@ -1,24 +1,43 @@
-
-
 import { AppConfig, NetworkType, TokenomicsConfig } from './types';
+
+// Helper to safely access process.env in browser environments
+export const getEnv = (key: string, defaultVal: string = '') => {
+  try {
+    // Check standard process.env (Node/Build time injection)
+    // @ts-ignore
+    if (typeof process !== 'undefined' && process.env && process.env[key]) {
+      // @ts-ignore
+      return process.env[key];
+    }
+    // Check window.process.env (Runtime shim)
+    // @ts-ignore
+    if (typeof window !== 'undefined' && window.process && window.process.env && window.process.env[key]) {
+      // @ts-ignore
+      return window.process.env[key];
+    }
+    return defaultVal;
+  } catch {
+    return defaultVal;
+  }
+};
 
 // ENVIRONMENT VARIABLES
 export const ENV = {
-  API_KEY: process.env.API_KEY || '', // Gemini API Key
-  NETWORK: (process.env.NETWORK as NetworkType) || NetworkType.TESTNET,
-  PI_APP_ID: process.env.PI_APP_ID || 'architex_pi_app_v1',
-  PI_BACKEND_URL: process.env.PI_BACKEND_URL || 'https://api.architex.protocol/v1',
+  API_KEY: getEnv('API_KEY'), 
+  NETWORK: (getEnv('NETWORK', 'TESTNET') as NetworkType),
+  PI_APP_ID: getEnv('PI_APP_ID', 'architex_pi_app_v1'),
+  PI_BACKEND_URL: getEnv('PI_BACKEND_URL', 'https://api.architex.protocol/v1'),
 };
 
 export const TOKENOMICS: TokenomicsConfig = {
   tokenId: 'ARTX_TOKEN_ID',
-  maxSupply: 100000000, // 100 Million
+  maxSupply: 1000000000, // 1 Billion
   distributions: {
-    liquidityPool: 20000000,
-    rewardsTreasury: 35000000,
-    teamFounders: 20000000,
-    strategicReserve: 15000000,
-    marketingPartners: 10000000,
+    liquidityPool: 200000000,
+    rewardsTreasury: 350000000,
+    teamFounders: 200000000,
+    strategicReserve: 150000000,
+    marketingPartners: 100000000,
   },
   vestingRules: {
     liquidityPool: 'Unlocked Immediately (Locked in AMM)',
@@ -44,39 +63,30 @@ export const CONFIG: AppConfig = {
 
 export const PAYMENT_CONFIG = {
   downloadCost: 0.50, // Pi
-  recipient: 'G...ARCHITEX_TREASURY',
+  recipient: 'ARCHITEX_TREASURY_WALLET',
   memo: 'Architex Design Download'
 };
 
 export const STELLAR_CONFIG = {
-  horizonUrl: 'https://horizon-testnet.stellar.org',
+  // Horizon URL removed as we now use Pi SDK exclusively
   assets: {
     ARTX: {
       code: 'ARTX',
-      // Using a known testnet issuer for demo purposes (e.g., a custom asset)
-      // In a real scenario, this is the Issuer Address of your token
-      issuer: 'GC4H57J66F73F57J66F73F57J66F73F57J66F73F57J66F73F57J66F7' 
+      issuer: 'ARCHITEX_ISSUER_ADDRESS' 
     },
-    XLM: {
-      code: 'XLM',
-      issuer: undefined // Native
-    },
-    USDC: {
-      code: 'USDC',
-      issuer: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5' // Stellar Testnet USDC
+    PI: {
+      code: 'Pi',
+      issuer: undefined 
     }
   }
 };
 
+// UI Constants
 export const UI_CONSTANTS = {
-  glassClass: 'glass-panel rounded-xl',
-  primaryGradient: 'bg-gradient-to-r from-neon-purple to-neon-pink',
-  textGradient: 'bg-clip-text text-transparent bg-gradient-to-r from-neon-cyan to-neon-purple',
-  scannerOverlayClass: 'absolute inset-0 border-2 border-neon-cyan/50 rounded-lg pointer-events-none',
+    glassClass: "glass-panel rounded-xl backdrop-blur-md border border-white/10",
+    textGradient: "bg-clip-text text-transparent bg-gradient-to-r from-neon-cyan via-purple-500 to-neon-pink",
 };
 
 export const VISION_CONFIG = {
-  slamEnabled: true,
-  scanIntervalMs: 3000, // Check frame every 3s for guidance
-  minQualityScore: 0.7,
+    scanIntervalMs: 500, // Process frame every 500ms
 };

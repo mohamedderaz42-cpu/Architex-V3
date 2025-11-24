@@ -1,8 +1,9 @@
 import { GoogleGenAI } from "@google/genai";
 import { ChatMessage } from "../types";
+import { getEnv } from "../constants";
 
 // In a real scenario, we check if key exists.
-const API_KEY = process.env.API_KEY || 'MISSING_KEY';
+const API_KEY = getEnv('API_KEY') || 'MISSING_KEY';
 
 let aiInstance: GoogleGenAI | null = null;
 

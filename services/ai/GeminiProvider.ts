@@ -1,10 +1,11 @@
 import { GoogleGenAI } from "@google/genai";
 import { IAIProvider, AIInput, AIOutput, AIProviderConfig } from "./types";
+import { getEnv } from "../../constants";
 
 // Registry map to safely access env vars dynamically based on config strings
 const ENV_REGISTRY: Record<string, string | undefined> = {
-  "API_KEY": process.env.API_KEY,
-  "OPENAI_API_KEY": process.env.OPENAI_API_KEY // Placeholder for future extensibility
+  "API_KEY": getEnv("API_KEY"),
+  "OPENAI_API_KEY": getEnv("OPENAI_API_KEY")
 };
 
 export class GeminiProvider implements IAIProvider {

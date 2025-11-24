@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { ViewState, UserSession } from './types';
 import { Dashboard } from './features/Dashboard';
@@ -38,7 +36,7 @@ const App: React.FC = () => {
       const updatedSession = await handleAddTrustline(session);
       setSession(updatedSession);
     } catch (e) {
-      alert("Failed to establish trustline.");
+      alert("Failed to activate wallet.");
     } finally {
       setLoading(false);
     }
@@ -131,7 +129,7 @@ const App: React.FC = () => {
                 <div className="text-right">
                    <div className="text-gray-400 text-sm">Status</div>
                    <div className={`text-sm font-bold ${session?.hasTrustline ? 'text-green-400' : 'text-orange-400'}`}>
-                     {session?.hasTrustline ? 'Active' : 'Pending Trustline'}
+                     {session?.hasTrustline ? 'Active' : 'Activation Pending'}
                    </div>
                 </div>
               </div>
@@ -139,14 +137,14 @@ const App: React.FC = () => {
               {!session?.hasTrustline && (
                 <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg mb-6">
                   <p className="text-orange-200 text-sm mb-3">
-                    Your wallet requires a Trustline to the ARTX Asset Contract to receive tokens.
+                    Your wallet needs to be activated to receive ARTX tokens.
                   </p>
                   <button 
                     onClick={onAddTrustline}
                     disabled={loading}
                     className="w-full py-3 bg-gradient-to-r from-orange-600 to-red-600 rounded font-bold hover:shadow-lg transition-all disabled:opacity-50"
                   >
-                    {loading ? 'Processing on Ledger...' : 'Establish Trustline (0.5 XLM Reserve)'}
+                    {loading ? 'Processing on Pi Network...' : 'Activate Wallet (1 Pi Reserve)'}
                   </button>
                 </div>
               )}
@@ -175,8 +173,8 @@ const App: React.FC = () => {
 
       {/* Footer */}
       <footer className="mt-20 border-t border-white/5 pt-8 text-center text-gray-500 text-xs">
-        <p>© 2024 Architex Protocol. Built on Pi Network & Stellar Soroban.</p>
-        <p className="mt-2 font-mono">v1.0.0-alpha | Testnet</p>
+        <p>© 2024 Architex Protocol. Built on Pi Network.</p>
+        <p className="mt-2 font-mono">v1.0.0-alpha | Pi Testnet</p>
         <div className="mt-4">
             <button 
                 onClick={() => setView(ViewState.ADMIN_LOGIN)}

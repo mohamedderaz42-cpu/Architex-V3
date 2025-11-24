@@ -4,6 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Architex | The Future of Web3</title>
+    <!-- Pi Network SDK -->
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <!-- Polyfills for browser environment -->
+    <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
+    <script>
+      // Global shims
+      window.global = window;
+      window.process = window.process || { env: {}, version: '16.0.0' };
+      
+      if (typeof window.Buffer === 'undefined') {
+        if (typeof window.buffer !== 'undefined' && window.buffer.Buffer) {
+          window.Buffer = window.buffer.Buffer;
+        } else {
+          console.warn('Buffer polyfill not loaded correctly');
+          window.Buffer = { isBuffer: () => false }; // Fallback to prevent crash
+        }
+      }
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700&display=swap" rel="stylesheet">
     <script>
@@ -68,11 +86,12 @@
 {
   "imports": {
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "recharts": "https://aistudiocdn.com/recharts@^3.5.0",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.0/client",
+    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0",
+    "recharts": "https://esm.sh/recharts@2.12.3?external=react,react-dom",
     "react": "https://aistudiocdn.com/react@^19.2.0",
-    "@stellar/stellar-sdk": "https://esm.sh/@stellar/stellar-sdk@12.1.0?bundle"
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/"
   }
 }
 </script>
