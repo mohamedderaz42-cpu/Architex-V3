@@ -1,5 +1,5 @@
 
-import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult, Order, OrderStatus, ServiceProviderProfile, ArbitratorProfile, Dispute, Bounty, BountyStatus, TrustProfile, DesignChallenge, EnterpriseProfile, EnterpriseMember, ServiceRequest, ServiceCategory, ServiceBid, RFQ } from "../types";
+import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult, Order, OrderStatus, ServiceProviderProfile, ArbitratorProfile, Dispute, Bounty, BountyStatus, TrustProfile, DesignChallenge, EnterpriseProfile, EnterpriseMember, ServiceRequest, ServiceCategory, ServiceBid, RFQ, Plugin } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
 import { visionAdapter } from "./vision/VisionAdapter";
 import { trustScoreService } from "./trustScoreService";
@@ -10,6 +10,7 @@ import { nftContractService } from "./nftContractService";
 import { erpSyncService } from "./erpSyncService";
 import { kybService } from "./kybService";
 import { rfqService } from "./rfqService";
+import { pluginSdk } from "./pluginSdk";
 
 // ... (Previous Imports and Constants remain same) ...
 const CURRENT_USER_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150";
@@ -71,6 +72,52 @@ let mockDisputes: Dispute[] = [];
 let mockChallenges: DesignChallenge[] = [];
 let activeServiceRequests: ServiceRequest[] = [];
 
+// PLUGIN STORE MOCK DATA
+let mockPlugins: Plugin[] = [
+    { 
+        id: 'plg_light_01', 
+        name: 'Lumina: Adv. Lighting', 
+        description: 'Real-time raytracing preview and IES profile support for blueprints.',
+        version: '1.2.0',
+        developer: 'PhotonLabs',
+        price: 15,
+        status: 'AVAILABLE',
+        iconUrl: '💡',
+        scriptUrl: 'https://cdn.architex.net/plugins/lumina.js',
+        permissions: ['READ_DATA'],
+        rating: 4.8,
+        downloads: 1250
+    },
+    { 
+        id: 'plg_cost_02', 
+        name: 'Cost Estimator Pro', 
+        description: 'Automatically calculate material BOM costs based on local suppliers.',
+        version: '2.0.1',
+        developer: 'BuildMetrics',
+        price: 0, // Free
+        status: 'AVAILABLE',
+        iconUrl: '💰',
+        scriptUrl: 'https://cdn.architex.net/plugins/cost.js',
+        permissions: ['READ_STOCK', 'READ_PROFILE'],
+        rating: 4.5,
+        downloads: 5000
+    },
+    { 
+        id: 'plg_vr_03', 
+        name: 'VR Exporter', 
+        description: 'One-click export to Unity/Unreal compatible formats.',
+        version: '0.9.5',
+        developer: 'MetaArch',
+        price: 25,
+        status: 'AVAILABLE',
+        iconUrl: '🥽',
+        scriptUrl: 'https://cdn.architex.net/plugins/vr.js',
+        permissions: ['READ_DATA'],
+        rating: 4.2,
+        downloads: 800
+    }
+];
+
 // ... (Keep basic DAL Getters/Setters: Account, Terms, Tier, Trustline) ...
 
 export const dalGetAccountInfo = async (): Promise<UserSession> => {
@@ -107,8 +154,55 @@ export const dalGetPublicGallery = async (): Promise<DesignAsset[]> => { return 
 export const dalUnlockDesign = async (pid: string, did: string): Promise<DesignAsset | null> => { return null; };
 export const dalSubmitInstallationProof = async (did: string, img: string): Promise<any> => { return { success: true, reward: 25 }; };
 
-// --- ENTERPRISE & B2B LOGIC (Phase 9) ---
+// --- PLUGIN STORE LOGIC ---
 
+export const dalGetPluginStore = async (): Promise<Plugin[]> => {
+    await new Promise(r => setTimeout(r, 500));
+    return [...mockPlugins];
+};
+
+export const dalGetInstalledPlugins = async (): Promise<Plugin[]> => {
+    // Return plugins marked as INSTALLED
+    return mockPlugins.filter(p => p.status === 'INSTALLED');
+};
+
+export const dalInstallPlugin = async (pluginId: string): Promise<boolean> => {
+    await new Promise(r => setTimeout(r, 1000)); // Simulate download
+    const idx = mockPlugins.findIndex(p => p.id === pluginId);
+    if (idx === -1) return false;
+    
+    // Update status
+    mockPlugins[idx].status = 'INSTALLED';
+    mockPlugins[idx].installDate = Date.now();
+    
+    // Initialize via SDK
+    await pluginSdk.loadPlugin(mockPlugins[idx]);
+    
+    return true;
+};
+
+export const dalUninstallPlugin = async (pluginId: string): Promise<boolean> => {
+    await new Promise(r => setTimeout(r, 500));
+    const idx = mockPlugins.findIndex(p => p.id === pluginId);
+    if (idx === -1) return false;
+    
+    mockPlugins[idx].status = 'AVAILABLE';
+    await pluginSdk.unloadPlugin(pluginId);
+    return true;
+};
+
+export const dalPublishPlugin = async (manifest: any): Promise<void> => {
+    await new Promise(r => setTimeout(r, 1500)); // Simulate review queue
+    const newPlugin: Plugin = {
+        ...manifest,
+        status: 'AVAILABLE',
+        downloads: 0,
+        rating: 0
+    };
+    mockPlugins.push(newPlugin);
+};
+
+// ... (Rest of DAL) ...
 export const dalGetEnterpriseProfile = async (enterpriseId: string): Promise<EnterpriseProfile> => {
     return mockEnterprise;
 };

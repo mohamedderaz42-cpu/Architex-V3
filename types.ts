@@ -27,7 +27,9 @@ export enum ViewState {
   CHALLENGES = 'CHALLENGES',
   ENTERPRISE_PORTAL = 'ENTERPRISE_PORTAL',
   CALCULATOR = 'CALCULATOR',
-  ARCHITEX_GO = 'ARCHITEX_GO'
+  ARCHITEX_GO = 'ARCHITEX_GO',
+  AR_VIEWER = 'AR_VIEWER',
+  PLUGIN_STORE = 'PLUGIN_STORE'
 }
 
 export enum NetworkType {
@@ -165,6 +167,7 @@ export interface DesignAsset {
   };
   // AI Compliance
   zoningWarnings?: string[]; 
+  arModelUrl?: string; // URL to GLB/USDZ
 }
 
 export interface NFTMetadata {
@@ -652,6 +655,28 @@ export interface AuditReport {
     reportHash: string; // IPFS Hash
     criticalIssuesFound: number;
     resolvedIssues: number;
+}
+
+// Plugin Ecosystem Types
+export type PluginPermission = 'READ_STOCK' | 'READ_PROFILE' | 'NOTIFICATIONS' | 'NETWORK_ACCESS' | 'READ_DATA';
+
+export interface PluginManifest {
+    id: string;
+    name: string;
+    version: string;
+    description: string;
+    developer: string;
+    iconUrl: string;
+    scriptUrl: string; // URL to the JS bundle
+    price: number; // Pi
+    permissions: PluginPermission[];
+}
+
+export interface Plugin extends PluginManifest {
+    status: 'AVAILABLE' | 'INSTALLED' | 'UPDATE_AVAILABLE' | 'DISABLED';
+    installDate?: number;
+    rating: number;
+    downloads: number;
 }
 
 // DeFi Types

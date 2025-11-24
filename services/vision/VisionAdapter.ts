@@ -1,3 +1,4 @@
+
 import { aiAdapter } from '../ai/AIAdapter';
 import { ScanAnalysisResult, ScanFrame, IVisionAdapter } from './types';
 import { VISION_CONFIG } from '../../constants';
@@ -107,6 +108,26 @@ class VisionAdapter implements IVisionAdapter {
       trackedPoints: simulatedFeaturePoints,
       trackingState: simulatedFeaturePoints > 20 ? 'TRACKING' : 'SEARCHING'
     };
+  }
+
+  // AR: Estimate Lighting for Day/Night Cycle (Phase 8.1)
+  // Returns 'DAY' or 'NIGHT' based on mock brightness analysis
+  async estimateEnvironmentalLighting(frame: ScanFrame): Promise<'DAY' | 'NIGHT'> {
+      // In a real app, we would calculate pixel luminance
+      // Here we check the hour or random chance for simulation
+      const hour = new Date().getHours();
+      const isDay = hour > 6 && hour < 18;
+      return isDay ? 'DAY' : 'NIGHT';
+  }
+
+  // AR: Plane Tracking simulation (Phase 8.3)
+  // Returns mock 3D coordinates for placing the model
+  trackPlane(): { x: number, y: number, z: number, valid: boolean } {
+      // Simulate finding a plane after some feature points are found
+      if (simulatedFeaturePoints > 30) {
+          return { x: 0, y: -1.5, z: -5, valid: true };
+      }
+      return { x: 0, y: 0, z: 0, valid: false };
   }
 }
 

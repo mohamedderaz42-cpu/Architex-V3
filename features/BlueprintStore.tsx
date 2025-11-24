@@ -5,6 +5,7 @@ import { dalGetUserDesigns, dalUnlockDesign, dalInitializeConversation } from '.
 import { piService } from '../services/piService';
 import { DesignAsset } from '../types';
 import { ProactiveIntervention } from '../components/ProactiveIntervention';
+import { ARViewer } from './ARViewer';
 
 interface BlueprintStoreProps {
     onOpenChat?: (contextId: string) => void;
@@ -22,6 +23,9 @@ export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) =>
 
   // Visualization State
   const [vizMode, setVizMode] = useState<Record<string, 'DAY' | 'NIGHT'>>({});
+  
+  // AR State (Phase 8)
+  const [activeARDesign, setActiveARDesign] = useState<DesignAsset | null>(null);
 
   useEffect(() => {
     loadDesigns();
@@ -122,6 +126,11 @@ export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) =>
           alert("Redirecting to Professional Services Directory...");
       }
   };
+
+  // Render AR Viewer Fullscreen if active
+  if (activeARDesign) {
+      return <ARViewer design={activeARDesign} onClose={() => setActiveARDesign(null)} />;
+  }
 
   return (
     <div className="space-y-6">
@@ -240,20 +249,12 @@ export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) =>
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                <div className="flex justify-between items-end mb-1">
-                                    <span className="text-xs text-green-400">License Acquired</span>
-                                </div>
                                 <div className="flex gap-2">
                                     <button 
-                                        onClick={() => handleCustomize(design)}
-                                        disabled={isCustomizing === design.id}
-                                        className="flex-1 py-2 bg-white/5 border border-white/20 text-white rounded-lg font-bold text-xs hover:bg-white/10 transition-all flex items-center justify-center gap-1"
+                                        onClick={() => setActiveARDesign(design)}
+                                        className="flex-1 py-2 bg-neon-purple/20 border border-neon-purple/50 text-white rounded-lg font-bold text-xs hover:bg-neon-purple/30 transition-all flex items-center justify-center gap-1"
                                     >
-                                        {isCustomizing === design.id ? (
-                                            <span className="animate-pulse">Saving...</span>
-                                        ) : (
-                                            <>Customize</>
-                                        )}
+                                        AR Twin
                                     </button>
                                     <button 
                                         onClick={() => handleDownload(design)}
@@ -262,6 +263,13 @@ export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) =>
                                         ↓
                                     </button>
                                 </div>
+                                <button 
+                                    onClick={() => handleCustomize(design)}
+                                    disabled={isCustomizing === design.id}
+                                    className="w-full py-2 bg-white/5 border border-white/20 text-white rounded-lg font-bold text-xs hover:bg-white/10 transition-all"
+                                >
+                                    {isCustomizing === design.id ? 'Saving...' : 'Customize'}
+                                </button>
                             </div>
                         )}
                         
