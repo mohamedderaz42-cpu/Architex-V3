@@ -1,5 +1,6 @@
 
 
+
 import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult, Order, OrderStatus } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
 import { visionAdapter } from "./vision/VisionAdapter";
@@ -59,7 +60,7 @@ let mockShippingZones: ShippingZone[] = [
 let mockOrders: Order[] = [
     {
         id: 'ORD-1001-ALPHA',
-        customerId: 'user_x92',
+        customerId: 'PiUser_Alpha',
         customerName: 'Alice Construct',
         items: [
              { ...mockInventory[2], cartQuantity: 1 }
@@ -68,7 +69,8 @@ let mockOrders: Order[] = [
         status: 'SHIPPED',
         timestamp: Date.now() - 86400000,
         shippingAddress: '123 Block Chain Ave, Crypto City, CA 90210',
-        trackingNumber: 'TRK-PI-8821X'
+        trackingNumber: 'TRK-PI-8821X',
+        payoutStatus: 'ESCROWED'
     },
     {
         id: 'ORD-1002-BETA',
@@ -81,7 +83,8 @@ let mockOrders: Order[] = [
         total: 57.50,
         status: 'PENDING',
         timestamp: Date.now() - 3600000,
-        shippingAddress: '404 Soroban Lane, Stellar Node 4, NY 10001'
+        shippingAddress: '404 Soroban Lane, Stellar Node 4, NY 10001',
+        payoutStatus: 'ESCROWED'
     }
 ];
 
@@ -324,6 +327,12 @@ export const dalGetVendorOrders = async (): Promise<Order[]> => {
     return [...mockOrders].sort((a, b) => b.timestamp - a.timestamp);
 };
 
+export const dalGetClientOrders = async (): Promise<Order[]> => {
+    // In a real app, this would query orders where customerId matches the logged-in user
+    // For demo, filtering by 'PiUser_Alpha'
+    return [...mockOrders].filter(o => o.customerId === 'PiUser_Alpha').sort((a, b) => b.timestamp - a.timestamp);
+};
+
 export const dalUpdateOrderStatus = async (orderId: string, status: OrderStatus, trackingNumber?: string): Promise<Order | null> => {
     await new Promise(resolve => setTimeout(resolve, 800));
     
@@ -336,6 +345,27 @@ export const dalUpdateOrderStatus = async (orderId: string, status: OrderStatus,
         trackingNumber: trackingNumber || mockOrders[idx].trackingNumber
     };
 
+    return mockOrders[idx];
+};
+
+export const dalConfirmReceipt = async (orderId: string): Promise<Order | null> => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const idx = mockOrders.findIndex(o => o.id === orderId);
+    if (idx === -1) return null;
+
+    // Automate Payout Logic
+    // 1. Update Status to Delivered
+    // 2. Release Funds from Escrow
+    
+    mockOrders[idx] = {
+        ...mockOrders[idx],
+        status: 'DELIVERED',
+        payoutStatus: 'RELEASED'
+    };
+
+    console.log(`[Smart Contract] Payout Released for Order ${orderId}: ${mockOrders[idx].total} Pi to Vendor.`);
+    
     return mockOrders[idx];
 };
 
@@ -543,7 +573,8 @@ export const dalCheckout = async (): Promise<CheckoutResult> => {
         total: mockCart.reduce((sum, item) => sum + (item.unitPrice * item.cartQuantity), 0),
         status: 'PENDING',
         timestamp: Date.now(),
-        shippingAddress: '123 Main St, Pi Network City, 00000' // Mock address
+        shippingAddress: '123 Main St, Pi Network City, 00000', // Mock address
+        payoutStatus: 'ESCROWED'
     };
     mockOrders.unshift(newOrder);
 

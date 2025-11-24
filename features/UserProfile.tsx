@@ -1,8 +1,10 @@
 
+
+
 import React, { useEffect, useState, useRef } from 'react';
-import { UserSession, DesignAsset, UserTier } from '../types';
+import { UserSession, DesignAsset, UserTier, Order } from '../types';
 import { GlassCard } from '../components/GlassCard';
-import { dalGetUserDesigns, dalSubmitInstallationProof, dalUpgradeTier } from '../services/dataAccessLayer';
+import { dalGetUserDesigns, dalSubmitInstallationProof, dalUpgradeTier, dalGetClientOrders, dalConfirmReceipt } from '../services/dataAccessLayer';
 import { piService } from '../services/piService';
 import { oracleService } from '../services/oracleService';
 import { UI_CONSTANTS, PAYMENT_CONFIG } from '../constants';
@@ -14,10 +16,11 @@ interface UserProfileProps {
 
 export const UserProfile: React.FC<UserProfileProps> = ({ session, onRefresh }) => {
   const [portfolio, setPortfolio] = useState<DesignAsset[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [subscribingTier, setSubscribingTier] = useState<string | null>(null);
   
   // Tab State
-  const [activeTab, setActiveTab] = useState<'PORTFOLIO' | 'DEVELOPER'>('PORTFOLIO');
+  const [activeTab, setActiveTab] = useState<'PORTFOLIO' | 'DEVELOPER' | 'ORDERS'>('PORTFOLIO');
 
   // Developer API State
   const [hasApiKey, setHasApiKey] = useState(false);
@@ -30,13 +33,27 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session, onRefresh }) 
   const [uploadingDesignId, setUploadingDesignId] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
 
+  // Order Confirmation State
+  const [confirmingOrder, setConfirmingOrder] = useState<string | null>(null);
+
   useEffect(() => {
     fetchDesigns();
   }, []);
 
+  useEffect(() => {
+      if (activeTab === 'ORDERS') {
+          fetchOrders();
+      }
+  }, [activeTab]);
+
   const fetchDesigns = async () => {
     const data = await dalGetUserDesigns();
     setPortfolio(data);
+  };
+
+  const fetchOrders = async () => {
+      const data = await dalGetClientOrders();
+      setOrders(data);
   };
 
   const handleSubscribe = async (tierName: string, cost: number, isApi: boolean = false) => {
@@ -126,6 +143,13 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session, onRefresh }) 
       };
 
       reader.readAsDataURL(file);
+  };
+
+  const handleConfirmReceipt = async (orderId: string) => {
+      setConfirmingOrder(orderId);
+      await dalConfirmReceipt(orderId);
+      await fetchOrders();
+      setConfirmingOrder(null);
   };
 
   return (
@@ -230,6 +254,12 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session, onRefresh }) 
             Portfolio
         </button>
         <button 
+            onClick={() => setActiveTab('ORDERS')}
+            className={`px-6 py-3 font-bold text-sm transition-colors ${activeTab === 'ORDERS' ? 'text-neon-cyan border-b-2 border-neon-cyan' : 'text-gray-500 hover:text-white'}`}
+        >
+            My Orders
+        </button>
+        <button 
             onClick={() => setActiveTab('DEVELOPER')}
             className={`px-6 py-3 font-bold text-sm transition-colors flex items-center gap-2 ${activeTab === 'DEVELOPER' ? 'text-neon-cyan border-b-2 border-neon-cyan' : 'text-gray-500 hover:text-white'}`}
         >
@@ -248,7 +278,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session, onRefresh }) 
       />
 
       {/* View Content */}
-      {activeTab === 'PORTFOLIO' ? (
+      {activeTab === 'PORTFOLIO' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {portfolio.map(design => {
                 const proofStatus = design.installationProof?.status || 'NONE';
@@ -311,8 +341,86 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session, onRefresh }) 
                 );
             })}
         </div>
-      ) : (
-        /* DEVELOPER API VIEW */
+      )}
+
+      {activeTab === 'ORDERS' && (
+          <div className="space-y-4">
+              {orders.length === 0 ? (
+                  <div className="p-12 text-center border border-dashed border-white/10 rounded-xl bg-white/5 text-gray-400">
+                      No active orders found. Visit the Smart Cart to make a purchase.
+                  </div>
+              ) : (
+                  orders.map(order => (
+                      <GlassCard key={order.id} className="relative overflow-hidden">
+                          <div className="flex flex-col md:flex-row gap-6 justify-between items-start">
+                              <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-2">
+                                      <h3 className="text-xl font-bold text-white">{order.id}</h3>
+                                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                                          order.status === 'PENDING' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
+                                          order.status === 'SHIPPED' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                                          order.status === 'DELIVERED' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                                          'bg-gray-500/20 text-gray-400 border-gray-500/30'
+                                      }`}>
+                                          {order.status}
+                                      </span>
+                                  </div>
+                                  <div className="text-sm text-gray-400 mb-4">
+                                      Placed on: {new Date(order.timestamp).toLocaleString()}
+                                  </div>
+                                  
+                                  <div className="space-y-1 mb-4">
+                                      {order.items.map((item, i) => (
+                                          <div key={i} className="flex justify-between text-sm bg-black/20 p-2 rounded">
+                                              <span className="text-gray-300">{item.cartQuantity}x {item.name}</span>
+                                              <span className="font-mono text-neon-cyan">{(item.unitPrice * item.cartQuantity).toFixed(2)} Pi</span>
+                                          </div>
+                                      ))}
+                                  </div>
+
+                                  <div className="flex justify-between items-center border-t border-white/10 pt-2 font-bold">
+                                      <span>Total Paid</span>
+                                      <span className="text-neon-purple text-lg">{order.total.toFixed(2)} Pi</span>
+                                  </div>
+                              </div>
+
+                              <div className="w-full md:w-64 bg-white/5 rounded-xl p-4 border border-white/10">
+                                  <div className="text-xs text-gray-500 uppercase font-bold mb-2">Delivery Status</div>
+                                  {order.trackingNumber ? (
+                                      <div className="mb-4">
+                                          <div className="text-sm font-mono text-white mb-1">{order.trackingNumber}</div>
+                                          <div className="text-xs text-blue-400">In Transit</div>
+                                      </div>
+                                  ) : (
+                                      <div className="mb-4 text-sm text-gray-500 italic">Processing at Warehouse...</div>
+                                  )}
+
+                                  {order.status === 'SHIPPED' ? (
+                                      <button 
+                                        onClick={() => handleConfirmReceipt(order.id)}
+                                        disabled={confirmingOrder === order.id}
+                                        className="w-full py-3 bg-gradient-to-r from-green-600 to-green-500 text-white font-bold rounded-lg shadow-lg shadow-green-500/20 hover:scale-105 transition-all disabled:opacity-50"
+                                      >
+                                          {confirmingOrder === order.id ? 'Confirming...' : 'Confirm Receipt'}
+                                      </button>
+                                  ) : order.status === 'DELIVERED' ? (
+                                      <div className="w-full py-3 bg-green-500/10 border border-green-500/20 rounded-lg text-center text-green-400 font-bold text-sm">
+                                          Order Complete
+                                      </div>
+                                  ) : (
+                                      <button disabled className="w-full py-3 bg-white/5 border border-white/10 rounded-lg text-gray-500 text-sm font-bold cursor-not-allowed">
+                                          Track Shipment
+                                      </button>
+                                  )}
+                              </div>
+                          </div>
+                      </GlassCard>
+                  ))
+              )}
+          </div>
+      )}
+
+      {activeTab === 'DEVELOPER' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Product Card */}
             <div className="lg:col-span-1 space-y-6">

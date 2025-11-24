@@ -209,6 +209,7 @@ export interface Order {
     timestamp: number;
     shippingAddress: string;
     trackingNumber?: string;
+    payoutStatus?: 'ESCROWED' | 'RELEASED'; // Status of funds
 }
 
 // Smart Cart Types
