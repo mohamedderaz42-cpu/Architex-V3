@@ -1,6 +1,6 @@
 
 
-import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult } from "../types";
+import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult, Order, OrderStatus } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
 import { visionAdapter } from "./vision/VisionAdapter";
 
@@ -53,6 +53,36 @@ let mockShippingZones: ShippingZone[] = [
     { id: 'zone_1', name: 'North America', regions: ['USA', 'Canada', 'Mexico'], baseRate: 5.0, incrementalRate: 1.5, estimatedDeliveryDays: '3-5', isActive: true },
     { id: 'zone_2', name: 'European Union', regions: ['Germany', 'France', 'Spain', 'Italy'], baseRate: 8.0, incrementalRate: 2.0, estimatedDeliveryDays: '5-7', isActive: true },
     { id: 'zone_3', name: 'Asia Pacific', regions: ['Japan', 'South Korea', 'Singapore'], baseRate: 12.0, incrementalRate: 3.0, estimatedDeliveryDays: '7-14', isActive: true }
+];
+
+// Mock Orders
+let mockOrders: Order[] = [
+    {
+        id: 'ORD-1001-ALPHA',
+        customerId: 'user_x92',
+        customerName: 'Alice Construct',
+        items: [
+             { ...mockInventory[2], cartQuantity: 1 }
+        ],
+        total: 150.00,
+        status: 'SHIPPED',
+        timestamp: Date.now() - 86400000,
+        shippingAddress: '123 Block Chain Ave, Crypto City, CA 90210',
+        trackingNumber: 'TRK-PI-8821X'
+    },
+    {
+        id: 'ORD-1002-BETA',
+        customerId: 'user_z44',
+        customerName: 'Bob Builder',
+        items: [
+             { ...mockInventory[1], cartQuantity: 5 },
+             { ...mockInventory[3], cartQuantity: 2 }
+        ],
+        total: 57.50,
+        status: 'PENDING',
+        timestamp: Date.now() - 3600000,
+        shippingAddress: '404 Soroban Lane, Stellar Node 4, NY 10001'
+    }
 ];
 
 
@@ -289,6 +319,26 @@ export const dalSubmitVendorApplication = async (data: Partial<VendorApplication
     return { ...mockVendorProfile };
 };
 
+export const dalGetVendorOrders = async (): Promise<Order[]> => {
+    // In a real app, this would filter orders by the logged-in vendor ID
+    return [...mockOrders].sort((a, b) => b.timestamp - a.timestamp);
+};
+
+export const dalUpdateOrderStatus = async (orderId: string, status: OrderStatus, trackingNumber?: string): Promise<Order | null> => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    const idx = mockOrders.findIndex(o => o.id === orderId);
+    if (idx === -1) return null;
+
+    mockOrders[idx] = {
+        ...mockOrders[idx],
+        status,
+        trackingNumber: trackingNumber || mockOrders[idx].trackingNumber
+    };
+
+    return mockOrders[idx];
+};
+
 // --- Inventory & Logistics Methods ---
 
 export const dalGetInventory = async (): Promise<InventoryItem[]> => {
@@ -484,11 +534,24 @@ export const dalCheckout = async (): Promise<CheckoutResult> => {
         return inv;
     });
 
+    // 3. Create Order for Vendor Dashboard
+    const newOrder: Order = {
+        id: `ORD-${Date.now().toString().substr(-6).toUpperCase()}`,
+        customerId: 'PiUser_Alpha',
+        customerName: 'Current User', // Mock name
+        items: [...mockCart],
+        total: mockCart.reduce((sum, item) => sum + (item.unitPrice * item.cartQuantity), 0),
+        status: 'PENDING',
+        timestamp: Date.now(),
+        shippingAddress: '123 Main St, Pi Network City, 00000' // Mock address
+    };
+    mockOrders.unshift(newOrder);
+
     mockCart = []; // Clear cart
 
     return {
         success: true,
-        orderId: `ORD-${Date.now().toString().substr(-6).toUpperCase()}`
+        orderId: newOrder.id
     };
 };
 

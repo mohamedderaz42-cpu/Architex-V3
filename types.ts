@@ -196,6 +196,21 @@ export interface ShippingZone {
     isActive: boolean;
 }
 
+// Order Management Types
+export type OrderStatus = 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED';
+
+export interface Order {
+    id: string;
+    customerId: string;
+    customerName: string; // Derived/Mocked
+    items: CartItem[];
+    total: number;
+    status: OrderStatus;
+    timestamp: number;
+    shippingAddress: string;
+    trackingNumber?: string;
+}
+
 // Smart Cart Types
 export interface CartItem extends InventoryItem {
     cartQuantity: number;
