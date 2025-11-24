@@ -2,6 +2,7 @@
 
 
 
+
 // Enums must be standard enums, not const enums
 export enum ViewState {
   DASHBOARD = 'DASHBOARD',
@@ -88,6 +89,7 @@ export interface UserSession {
   votingPower?: number;
   enterpriseId?: string;
   isWhitelisted?: boolean; // For Beta Access
+  hasSignedToS: boolean; // Digital Immunity Protocol
 }
 
 export interface ChatMessage {

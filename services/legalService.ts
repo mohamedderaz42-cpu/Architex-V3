@@ -1,4 +1,6 @@
 
+
+
 import { LegalAgreement } from "../types";
 
 export interface ContractParams {
@@ -12,6 +14,34 @@ export interface ContractParams {
 
 class LegalService {
   private agreements: LegalAgreement[] = [];
+
+  /**
+   * DIGITAL IMMUNITY PROTOCOL
+   * Returns the immutable Terms of Service for the "Venue Only" agreement.
+   */
+  getDigitalImmunityTerms(): string {
+      return `
+ARCHITEX DIGITAL IMMUNITY PROTOCOL (TERMS OF SERVICE)
+
+1. VENUE ONLY AGREEMENT (The "Intermediary Clause")
+   By accessing the Architex Protocol, you explicitly acknowledge that Architex is a decentralized software interface ("Venue") connecting independent users. Architex is NOT a party to any contract, bounty, or service agreement between users. All contractual obligations are solely between the Client and the Service Provider.
+
+2. NO WARRANTY & DISCLAIMER
+   Architex provides this software "AS IS", without warranty of any kind, express or implied. We disclaim all liability for:
+   - The quality, safety, or legality of services provided by users.
+   - Financial losses due to smart contract execution or Pi Network downtime.
+   - The structural integrity or code compliance of any AI-generated blueprints.
+
+3. AI COMPLIANCE NOTICE
+   AI-generated designs are for conceptual purposes only. You agree to obtain verification from a licensed professional before any physical construction.
+
+4. ARBITRATION & DISPUTES
+   You agree to resolve all disputes via the Architex DAO Decentralized Arbitration system. The decision of the Arbitrator (human or AI) is final and binding within the scope of the protocol's escrowed funds.
+
+5. CRYPTOGRAPHIC CONSENT
+   Your digital signature on this agreement serves as immutable proof of your acceptance of these terms on the Pi Network blockchain.
+      `.trim();
+  }
 
   /**
    * Generates the legal text based on dynamic inputs.

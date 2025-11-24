@@ -3,6 +3,8 @@
 
 
 
+
+
 // ... imports ...
 import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult, Order, OrderStatus, ServiceProviderProfile, ArbitratorProfile, Dispute, Bounty, BountyStatus, TrustProfile, DesignChallenge, EnterpriseProfile, EnterpriseMember, ServiceRequest, ServiceCategory, ServiceBid } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
@@ -336,6 +338,9 @@ export const dalGetAccountInfo = async (): Promise<UserSession> => {
 
       const votingPower = trustScoreService.calculateVotingPower(totalStaked, trustProfile.score);
       const isWhitelisted = await systemConfigService.isUserWhitelisted(username);
+      
+      // Check local persistent storage for ToS signature
+      const hasSignedToS = offlineService.getFromCache<boolean>('user_tos_signed') || false;
 
       return {
         isAuthenticated: true,
@@ -350,9 +355,17 @@ export const dalGetAccountInfo = async (): Promise<UserSession> => {
         trustProfile,
         votingPower,
         enterpriseId: 'ent_mega_corp',
-        isWhitelisted
+        isWhitelisted,
+        hasSignedToS
       };
   });
+};
+
+export const dalSignTerms = async (walletAddress: string): Promise<boolean> => {
+    // Simulate blockchain transaction / message signing
+    await new Promise(r => setTimeout(r, 1000));
+    offlineService.saveToCache('user_tos_signed', true);
+    return true;
 };
 
 export const dalUpgradeTier = async (newTier: UserTier): Promise<boolean> => {

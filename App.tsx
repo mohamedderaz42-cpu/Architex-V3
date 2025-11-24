@@ -1,6 +1,8 @@
 
 
 
+
+
 import React, { useState, useEffect } from 'react';
 import { ViewState, UserSession, SystemMode } from './types';
 import { Dashboard } from './features/Dashboard';
@@ -31,8 +33,10 @@ import { GlassCard } from './components/GlassCard';
 import { ArchieBot } from './components/ArchieBot';
 import { initializeSession, handleAddTrustline } from './services/orchestrator';
 import { adsService } from './services/adsService';
-import { dalGetCart } from './services/dataAccessLayer';
+import { dalGetCart, dalSignTerms } from './services/dataAccessLayer';
 import { systemConfigService } from './services/adminService'; // Import for mode check
+import { legalService } from './services/legalService';
+import { offlineService } from './services/offlineService';
 import { UI_CONSTANTS } from './constants';
 
 const App: React.FC = () => {
@@ -46,9 +50,27 @@ const App: React.FC = () => {
   const [appMode, setAppMode] = useState<SystemMode>('BETA'); // Default to blocked until fetch
   const [accessDenied, setAccessDenied] = useState(false);
 
+  // Phase 12: Digital Immunity
+  const [showToS, setShowToS] = useState(false);
+  const [signingToS, setSigningToS] = useState(false);
+
+  // Offline State
+  const [isOffline, setIsOffline] = useState(!offlineService.isOnline());
+
   useEffect(() => {
     init();
     adsService.init();
+
+    // Global Offline Listener
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   useEffect(() => {
@@ -82,7 +104,26 @@ const App: React.FC = () => {
         setAccessDenied(false);
     }
 
+    // Check Digital Immunity Signature
+    if (userSession.isAuthenticated && !userSession.hasSignedToS) {
+        setShowToS(true);
+    }
+
     setLoading(false);
+  };
+
+  const handleSignToS = async () => {
+      if (!session) return;
+      setSigningToS(true);
+      try {
+          await dalSignTerms(session.walletAddress || 'mock_addr');
+          setSession({...session, hasSignedToS: true});
+          setShowToS(false);
+      } catch (e) {
+          alert("Failed to sign terms. Please try again.");
+      } finally {
+          setSigningToS(false);
+      }
   };
 
   const onAddTrustline = async () => {
@@ -130,6 +171,52 @@ const App: React.FC = () => {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-neon-cyan animate-pulse">Initializing Protocol...</div>;
 
+  // DIGITAL IMMUNITY PROTOCOL MODAL
+  if (showToS) {
+      return (
+          <div className="min-h-screen flex items-center justify-center bg-black/90 backdrop-blur-lg p-4 relative z-50">
+              <GlassCard className="max-w-2xl w-full max-h-[80vh] flex flex-col border-neon-cyan/50 shadow-[0_0_100px_rgba(0,243,255,0.2)]">
+                  <div className="p-6 border-b border-white/10">
+                      <div className="flex items-center gap-3 mb-2">
+                          <svg className="w-8 h-8 text-neon-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                          <h2 className="text-2xl font-display font-bold text-white">Digital Immunity Protocol</h2>
+                      </div>
+                      <p className="text-gray-400 text-sm">
+                          Action Required: You must cryptographically sign the "Venue Only" agreement to access the Architex Protocol.
+                      </p>
+                  </div>
+                  
+                  <div className="flex-1 overflow-y-auto p-6 bg-black/40 font-mono text-xs text-gray-300 leading-relaxed whitespace-pre-wrap border-y border-white/5">
+                      {legalService.getDigitalImmunityTerms()}
+                  </div>
+
+                  <div className="p-6 bg-white/5 border-t border-white/10">
+                      <button 
+                          onClick={handleSignToS}
+                          disabled={signingToS}
+                          className="w-full py-4 bg-gradient-to-r from-neon-cyan to-blue-600 text-white font-bold rounded-lg shadow-lg hover:scale-[1.01] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                          {signingToS ? (
+                              <>
+                                <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                Signing Transaction...
+                              </>
+                          ) : (
+                              <>
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                Sign with Pi Wallet
+                              </>
+                          )}
+                      </button>
+                      <p className="text-[10px] text-gray-500 text-center mt-3">
+                          This signature creates an immutable record on the blockchain.
+                      </p>
+                  </div>
+              </GlassCard>
+          </div>
+      );
+  }
+
   // BETA GATE SCREEN
   if (accessDenied && view !== ViewState.ADMIN_LOGIN) {
       return (
@@ -170,6 +257,13 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen font-sans text-white p-4 pb-24 md:p-8 max-w-7xl mx-auto relative">
+      {/* Global Offline Indicator */}
+      {isOffline && (
+          <div className="fixed top-0 left-0 right-0 bg-orange-600 text-black text-center text-xs font-bold py-1 z-[60] animate-pulse">
+              ⚠️ NETWORK OFFLINE: Using Cached Data
+          </div>
+      )}
+
       {/* App Mode Indicator */}
       {appMode !== 'LIVE' && (
           <div className={`fixed top-0 left-0 right-0 h-1 z-50 ${appMode === 'BETA' ? 'bg-neon-purple' : 'bg-yellow-500'}`}></div>

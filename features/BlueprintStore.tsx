@@ -2,6 +2,8 @@
 
 
 
+
+
 import React, { useEffect, useState } from 'react';
 import { GlassCard } from '../components/GlassCard';
 import { dalGetUserDesigns, dalUnlockDesign, dalInitializeConversation } from '../services/dataAccessLayer';
@@ -233,6 +235,11 @@ export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) =>
                                 ))}
                             </div>
                         )}
+                        
+                        {/* Mandatory AI Disclaimer */}
+                        <div className="mb-3 bg-white/5 p-2 rounded border border-white/5 text-[9px] text-gray-500 italic">
+                            ⚠️ This design is for conceptual purposes only and not for construction without professional verification.
+                        </div>
                     </div>
 
                     <div className="mt-auto space-y-3">
