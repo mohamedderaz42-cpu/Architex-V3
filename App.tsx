@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { ViewState, UserSession } from './types';
 import { Dashboard } from './features/Dashboard';
@@ -7,7 +8,8 @@ import { Scanner } from './features/Scanner';
 import { BlueprintStore } from './features/BlueprintStore';
 import { Gallery } from './features/Gallery';
 import { UserProfile } from './features/UserProfile';
-import { AdminPanel } from './features/AdminPanel'; // Import AdminPanel
+import { AdminPanel } from './features/AdminPanel';
+import { Messages } from './features/Messages'; // Import Messages
 import { GlassCard } from './components/GlassCard';
 import { ArchieBot } from './components/ArchieBot';
 import { initializeSession, handleAddTrustline } from './services/orchestrator';
@@ -17,6 +19,7 @@ const App: React.FC = () => {
   const [view, setView] = useState<ViewState>(ViewState.DASHBOARD);
   const [session, setSession] = useState<UserSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeContextId, setActiveContextId] = useState<string | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -40,9 +43,17 @@ const App: React.FC = () => {
     }
   };
 
+  const handleOpenChat = (contextId: string) => {
+      setActiveContextId(contextId);
+      setView(ViewState.MESSAGES);
+  };
+
   const NavItem = ({ label, target }: { label: string; target: ViewState }) => (
     <button
-      onClick={() => setView(target)}
+      onClick={() => {
+          setView(target);
+          if (target !== ViewState.MESSAGES) setActiveContextId(null);
+      }}
       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
         view === target ? 'bg-neon-purple/20 text-neon-cyan border border-neon-purple/50' : 'text-gray-400 hover:text-white'
       }`}
@@ -67,7 +78,7 @@ const App: React.FC = () => {
           <NavItem label="Scan" target={ViewState.SCANNER} />
           <NavItem label="Gallery" target={ViewState.GALLERY} />
           <NavItem label="Blueprints" target={ViewState.BLUEPRINTS} />
-          <NavItem label="Whitepaper" target={ViewState.WHITEPAPER} />
+          <NavItem label="Inbox" target={ViewState.MESSAGES} />
           <NavItem label="Wallet" target={ViewState.WALLET} />
         </nav>
 
@@ -94,8 +105,9 @@ const App: React.FC = () => {
         {view === ViewState.DASHBOARD && <Dashboard />}
         {view === ViewState.WHITEPAPER && <Whitepaper />}
         {view === ViewState.SCANNER && <Scanner onNavigateToBlueprints={() => setView(ViewState.BLUEPRINTS)} />}
-        {view === ViewState.BLUEPRINTS && <BlueprintStore />}
+        {view === ViewState.BLUEPRINTS && <BlueprintStore onOpenChat={handleOpenChat} />}
         {view === ViewState.GALLERY && <Gallery />}
+        {view === ViewState.MESSAGES && <Messages initialContextId={activeContextId} />}
         {view === ViewState.PROFILE && session && <UserProfile session={session} />}
         
         {/* Admin Views */}

@@ -1,12 +1,16 @@
 
 import React, { useEffect, useState } from 'react';
 import { GlassCard } from '../components/GlassCard';
-import { dalGetUserDesigns, dalUnlockDesign } from '../services/dataAccessLayer';
+import { dalGetUserDesigns, dalUnlockDesign, dalInitializeConversation } from '../services/dataAccessLayer';
 import { piService } from '../services/piService';
 import { DesignAsset } from '../types';
 import { PAYMENT_CONFIG, UI_CONSTANTS } from '../constants';
 
-export const BlueprintStore: React.FC = () => {
+interface BlueprintStoreProps {
+    onOpenChat?: (contextId: string) => void;
+}
+
+export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) => {
   const [designs, setDesigns] = useState<DesignAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -68,6 +72,13 @@ export const BlueprintStore: React.FC = () => {
       }
   };
 
+  const handleContextualChat = async (design: DesignAsset) => {
+      const contextId = await dalInitializeConversation(design);
+      if (onOpenChat) {
+          onOpenChat(contextId);
+      }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -121,45 +132,56 @@ export const BlueprintStore: React.FC = () => {
                     </p>
                 </div>
 
-                {design.status === 'LOCKED' ? (
-                    <div className="mt-auto">
-                        <div className="flex justify-between items-end mb-3">
-                            <span className="text-xs text-neon-pink">Encryption Active</span>
-                            <span className="text-xl font-bold text-neon-cyan">{design.price.toFixed(2)} Pi</span>
+                <div className="mt-auto space-y-3">
+                    {design.status === 'LOCKED' ? (
+                        <div>
+                            <div className="flex justify-between items-end mb-3">
+                                <span className="text-xs text-neon-pink">Encryption Active</span>
+                                <span className="text-xl font-bold text-neon-cyan">{design.price.toFixed(2)} Pi</span>
+                            </div>
+                            <button 
+                                onClick={() => handleUnlock(design)}
+                                disabled={!!processingId}
+                                className="w-full py-2 bg-gradient-to-r from-neon-purple to-pink-600 rounded-lg font-bold text-white text-sm hover:shadow-[0_0_15px_rgba(188,19,254,0.4)] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {processingId === design.id ? (
+                                    <>
+                                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                        <span>Confirming on Chain...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                        <span>Pay & Unlock High-Res</span>
+                                    </>
+                                )}
+                            </button>
                         </div>
-                        <button 
-                            onClick={() => handleUnlock(design)}
-                            disabled={!!processingId}
-                            className="w-full py-2 bg-gradient-to-r from-neon-purple to-pink-600 rounded-lg font-bold text-white text-sm hover:shadow-[0_0_15px_rgba(188,19,254,0.4)] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                        >
-                            {processingId === design.id ? (
-                                <>
-                                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                    <span>Confirming on Chain...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                                    <span>Pay & Unlock High-Res</span>
-                                </>
-                            )}
-                        </button>
-                    </div>
-                ) : (
-                    <div className="mt-auto">
-                         <div className="flex justify-between items-end mb-3">
-                            <span className="text-xs text-green-400">License Acquired</span>
-                            <span className="text-xs text-gray-400">Ready for Export</span>
+                    ) : (
+                        <div>
+                             <div className="flex justify-between items-end mb-3">
+                                <span className="text-xs text-green-400">License Acquired</span>
+                                <span className="text-xs text-gray-400">Ready for Export</span>
+                            </div>
+                            <button 
+                                onClick={() => handleDownload(design)}
+                                className="w-full py-2 bg-white/10 border border-green-500/30 text-green-400 rounded-lg font-bold text-sm hover:bg-green-500/10 transition-all flex items-center justify-center gap-2"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                Download Source File
+                            </button>
                         </div>
-                        <button 
-                            onClick={() => handleDownload(design)}
-                            className="w-full py-2 bg-white/10 border border-green-500/30 text-green-400 rounded-lg font-bold text-sm hover:bg-green-500/10 transition-all flex items-center justify-center gap-2"
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                            Download Source File
-                        </button>
-                    </div>
-                )}
+                    )}
+                    
+                    {/* Contextual Messaging Trigger */}
+                    <button 
+                        onClick={() => handleContextualChat(design)}
+                        className="w-full py-2 bg-transparent border border-white/20 text-gray-300 rounded-lg font-medium text-xs hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
+                    >
+                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                         {design.status === 'LOCKED' ? 'Inquire about Pricing' : 'Design Support'}
+                    </button>
+                </div>
               </div>
             </GlassCard>
           ))}

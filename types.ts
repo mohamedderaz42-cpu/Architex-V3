@@ -1,4 +1,5 @@
 
+
 // Enums must be standard enums, not const enums
 export enum ViewState {
   DASHBOARD = 'DASHBOARD',
@@ -10,7 +11,8 @@ export enum ViewState {
   GALLERY = 'GALLERY',
   PROFILE = 'PROFILE',
   ADMIN_LOGIN = 'ADMIN_LOGIN',
-  ADMIN_PANEL = 'ADMIN_PANEL'
+  ADMIN_PANEL = 'ADMIN_PANEL',
+  MESSAGES = 'MESSAGES'
 }
 
 export enum NetworkType {
@@ -55,6 +57,28 @@ export interface ChatMessage {
   text: string;
   timestamp: number;
   isThinking?: boolean;
+}
+
+// Contextual Messaging Types
+export type MessageSender = 'user' | 'support' | 'system';
+
+export interface ContextualMessage {
+  id: string;
+  sender: MessageSender;
+  text: string;
+  timestamp: number;
+  contextId: string;
+  isRead: boolean;
+}
+
+export interface Conversation {
+  contextId: string; // designId or orderId
+  contextType: 'DESIGN' | 'ORDER' | 'SUPPORT';
+  title: string;
+  lastMessage: string;
+  lastTimestamp: number;
+  unreadCount: number;
+  thumbnailUrl?: string;
 }
 
 export interface AppConfig {

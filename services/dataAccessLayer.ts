@@ -1,5 +1,6 @@
 
-import { TokenomicsConfig, UserSession, DesignAsset } from "../types";
+
+import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
 
 // Represents the compliant headers required by Pi Network distributed backend
@@ -77,6 +78,30 @@ const mockGallery: DesignAsset[] = [
   }
 ];
 
+// --- Contextual Messaging Store ---
+let mockConversations: Conversation[] = [
+    {
+        contextId: 'support_general',
+        contextType: 'SUPPORT',
+        title: 'General Support',
+        lastMessage: 'Welcome to Architex Support.',
+        lastTimestamp: Date.now() - 1000000,
+        unreadCount: 0,
+        thumbnailUrl: DEFAULT_AVATAR
+    }
+];
+
+let mockMessages: ContextualMessage[] = [
+    {
+        id: 'msg_0',
+        contextId: 'support_general',
+        sender: 'system',
+        text: 'Welcome to Architex Support. How can we help you today?',
+        timestamp: Date.now() - 1000000,
+        isRead: true
+    }
+];
+
 export const dalGetAccountInfo = async (): Promise<UserSession> => {
   await new Promise(resolve => setTimeout(resolve, 800));
   return {
@@ -151,4 +176,86 @@ export const dalUnlockDesign = async (paymentId: string, designId: string): Prom
         return mockDesigns[designIndex];
     }
     return null;
+};
+
+// --- Messaging Methods ---
+
+export const dalGetConversations = async (): Promise<Conversation[]> => {
+    // Sort by latest timestamp
+    return [...mockConversations].sort((a, b) => b.lastTimestamp - a.lastTimestamp);
+};
+
+export const dalGetMessages = async (contextId: string): Promise<ContextualMessage[]> => {
+    return mockMessages.filter(m => m.contextId === contextId).sort((a, b) => a.timestamp - b.timestamp);
+};
+
+export const dalSendMessage = async (contextId: string, text: string): Promise<ContextualMessage> => {
+    const newMessage: ContextualMessage = {
+        id: `msg_${Date.now()}`,
+        contextId,
+        sender: 'user',
+        text,
+        timestamp: Date.now(),
+        isRead: true
+    };
+    
+    mockMessages.push(newMessage);
+    
+    // Update conversation meta
+    const convIndex = mockConversations.findIndex(c => c.contextId === contextId);
+    if (convIndex > -1) {
+        mockConversations[convIndex].lastMessage = text;
+        mockConversations[convIndex].lastTimestamp = newMessage.timestamp;
+    }
+
+    // Simulate Automated System Response for Context
+    setTimeout(() => {
+        const sysMsg: ContextualMessage = {
+            id: `sys_${Date.now()}`,
+            contextId,
+            sender: 'support',
+            text: `[Automated] We received your inquiry regarding context #${contextId.substring(0,6)}. An architect will review your request shortly.`,
+            timestamp: Date.now(),
+            isRead: false
+        };
+        mockMessages.push(sysMsg);
+        if (convIndex > -1) {
+            mockConversations[convIndex].lastMessage = "An architect will review your request shortly.";
+            mockConversations[convIndex].lastTimestamp = sysMsg.timestamp;
+            mockConversations[convIndex].unreadCount += 1;
+        }
+    }, 1500);
+
+    return newMessage;
+};
+
+export const dalInitializeConversation = async (design: DesignAsset): Promise<string> => {
+    // Check if conversation exists
+    const existing = mockConversations.find(c => c.contextId === design.id);
+    if (existing) return existing.contextId;
+
+    // Create new
+    const newConv: Conversation = {
+        contextId: design.id,
+        contextType: 'DESIGN',
+        title: `Inquiry: ${design.title}`,
+        lastMessage: 'Conversation started.',
+        lastTimestamp: Date.now(),
+        unreadCount: 0,
+        thumbnailUrl: design.thumbnailUrl
+    };
+    
+    mockConversations.unshift(newConv);
+    
+    // Initial System Message
+    mockMessages.push({
+        id: `init_${design.id}`,
+        contextId: design.id,
+        sender: 'system',
+        text: `Context Attached: ${design.title} (${design.format}). Reference ID: ${design.id}.`,
+        timestamp: Date.now(),
+        isRead: true
+    });
+
+    return design.id;
 };
