@@ -8,6 +8,8 @@
 
 
 
+
+
 import React, { useState, useEffect } from 'react';
 import { ViewState, UserSession } from './types';
 import { Dashboard } from './features/Dashboard';
@@ -30,6 +32,7 @@ import { SmartCart } from './features/SmartCart'; // Import Smart Cart
 import { ServiceNetwork } from './features/ServiceNetwork'; // Import Service Network
 import { DisputeConsole } from './features/DisputeConsole'; // Import Dispute Console
 import { GovernanceDAO } from './features/GovernanceDAO'; // Import DAO
+import { DesignChallenges } from './features/DesignChallenges'; // Import Challenges
 import { GlassCard } from './components/GlassCard';
 import { ArchieBot } from './components/ArchieBot';
 import { initializeSession, handleAddTrustline } from './services/orchestrator';
@@ -148,8 +151,9 @@ const App: React.FC = () => {
           </button>
           
           <div className="w-px h-6 bg-white/20 mx-1 self-center hidden md:block"></div>
-          <NavItem label="Governance" target={ViewState.GOVERNANCE} /> {/* New */}
+          <NavItem label="Governance" target={ViewState.GOVERNANCE} /> 
           <NavItem label="Disputes" target={ViewState.DISPUTES} />
+          <NavItem label="Challenges" target={ViewState.CHALLENGES} /> {/* New */}
         </nav>
 
         {/* User Status */}
@@ -194,6 +198,7 @@ const App: React.FC = () => {
         {view === ViewState.SERVICES && <ServiceNetwork />}
         {view === ViewState.DISPUTES && <DisputeConsole />}
         {view === ViewState.GOVERNANCE && session && <GovernanceDAO session={session} />}
+        {view === ViewState.CHALLENGES && <DesignChallenges />}
         
         {/* Admin Views */}
         {(view === ViewState.ADMIN_LOGIN || view === ViewState.ADMIN_PANEL) && (

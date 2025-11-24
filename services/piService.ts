@@ -1,4 +1,6 @@
 
+
+
 import { PAYMENT_CONFIG, CONTRACT_CONFIG } from "../constants";
 
 export interface PaymentCallbacks {
@@ -112,6 +114,29 @@ class PiService {
       console.error("[PiService] Create Payment Failed", e);
       throw e;
     }
+  }
+
+  /**
+   * Simulates posting to Pi Network Social Feed
+   */
+  async shareToPiSocial(text: string, url?: string): Promise<boolean> {
+      await this.init();
+      console.log("[PiService] Sharing to Pi Social:", text);
+      
+      if (window.Pi && window.Pi.openShareDialog) {
+          try {
+              // Hypothetical Pi SDK Share method
+              await window.Pi.openShareDialog(text, url);
+              return true;
+          } catch (e) {
+              console.warn("Share dialog failed or closed", e);
+              return false;
+          }
+      } else {
+          // Fallback Alert
+          alert(`Shared to Pi Feed: "${text}"`);
+          return true;
+      }
   }
 }
 

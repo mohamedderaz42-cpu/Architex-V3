@@ -5,7 +5,9 @@
 
 
 
-import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult, Order, OrderStatus, ServiceProviderProfile, ArbitratorProfile, Dispute, Bounty, BountyStatus, TrustProfile } from "../types";
+
+
+import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult, Order, OrderStatus, ServiceProviderProfile, ArbitratorProfile, Dispute, Bounty, BountyStatus, TrustProfile, DesignChallenge } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
 import { visionAdapter } from "./vision/VisionAdapter";
 import { trustScoreService } from "./trustScoreService";
@@ -110,7 +112,8 @@ let mockDesigns: DesignAsset[] = [
     authorAvatar: CURRENT_USER_AVATAR,
     likes: 124,
     views: 450,
-    installationProof: { status: 'NONE' }
+    installationProof: { status: 'NONE' },
+    geolocation: { lat: 35.6762, lng: 139.6503, timezone: 'Asia/Tokyo' }
   }
 ];
 
@@ -128,7 +131,8 @@ const mockGallery: DesignAsset[] = [
     author: 'StellarArchitect',
     authorAvatar: 'https://ui-avatars.com/api/?name=SA&background=00f3ff&color=000',
     likes: 843,
-    views: 2100
+    views: 2100,
+    geolocation: { lat: 28.5383, lng: -81.3792, timezone: 'America/New_York' } // Cape Canaveral-ish
   },
   {
     id: 'gal_2',
@@ -142,7 +146,8 @@ const mockGallery: DesignAsset[] = [
     author: 'EcoBuilder_Pi',
     authorAvatar: 'https://ui-avatars.com/api/?name=EB&background=10b981&color=fff',
     likes: 562,
-    views: 1200
+    views: 1200,
+    geolocation: { lat: -8.4095, lng: 115.1889, timezone: 'Asia/Makassar' } // Bali
   },
   {
     id: 'gal_3',
@@ -156,8 +161,37 @@ const mockGallery: DesignAsset[] = [
     author: 'NeonDrifter',
     authorAvatar: 'https://ui-avatars.com/api/?name=ND&background=bc13fe&color=fff',
     likes: 2300,
-    views: 5600
+    views: 5600,
+    geolocation: { lat: 22.3193, lng: 114.1694, timezone: 'Asia/Hong_Kong' }
   }
+];
+
+// Mock Design Challenges
+let mockChallenges: DesignChallenge[] = [
+    {
+        id: 'chal_001',
+        title: 'Micro-Housing for Urban Density',
+        description: 'Design a sub-20sqm living unit that maximizes utility in dense urban environments. Must include sustainable materials.',
+        rewardARTX: 5000,
+        sponsorDAO: 'Urban Future Guild',
+        deadline: Date.now() + 1209600000, // +14 days
+        participants: 42,
+        status: 'ACTIVE',
+        requirements: ['< 20sqm', 'Recycled Materials', 'OBJ Format'],
+        thumbnailUrl: 'https://images.unsplash.com/photo-1486325212027-8081e485255e?auto=format&fit=crop&w=400&h=250'
+    },
+    {
+        id: 'chal_002',
+        title: 'Martian Greenhouse Concept',
+        description: 'Create a pressurized greenhouse module suitable for Martian colonization. Focus on structural integrity and radiation shielding.',
+        rewardARTX: 10000,
+        sponsorDAO: 'Interplanetary Architex DAO',
+        deadline: Date.now() + 604800000, // +7 days
+        participants: 128,
+        status: 'VOTING',
+        requirements: ['Pressurized Seal', 'Radiation Shielding', 'Hydroponics Layout'],
+        thumbnailUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=400&h=250'
+    }
 ];
 
 // --- Contextual Messaging Store ---
@@ -340,7 +374,8 @@ export const dalGenerateBlueprint = async (scanData: any): Promise<DesignAsset> 
         authorAvatar: CURRENT_USER_AVATAR,
         likes: 0,
         views: 0,
-        installationProof: { status: 'NONE' }
+        installationProof: { status: 'NONE' },
+        geolocation: { lat: 40.7128, lng: -74.0060, timezone: 'America/New_York' } // Default mock geo
     };
     
     mockDesigns.unshift(newDesign);
@@ -817,4 +852,20 @@ export const dalUpdateDispute = async (dispute: Dispute): Promise<void> => {
     if (idx > -1) {
         mockDisputes[idx] = dispute;
     }
+};
+
+// --- Design Challenges Methods ---
+
+export const dalGetActiveChallenges = async (): Promise<DesignChallenge[]> => {
+    return [...mockChallenges];
+};
+
+export const dalSubmitToChallenge = async (challengeId: string, designId: string): Promise<boolean> => {
+    await new Promise(r => setTimeout(r, 1000));
+    const idx = mockChallenges.findIndex(c => c.id === challengeId);
+    if (idx > -1) {
+        mockChallenges[idx].participants += 1;
+        return true;
+    }
+    return false;
 };

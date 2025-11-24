@@ -24,7 +24,8 @@ export enum ViewState {
   CART = 'CART',
   SERVICES = 'SERVICES',
   DISPUTES = 'DISPUTES',
-  GOVERNANCE = 'GOVERNANCE' // New: DAO Governance
+  GOVERNANCE = 'GOVERNANCE',
+  CHALLENGES = 'CHALLENGES' // New: Design Challenges
 }
 
 export enum NetworkType {
@@ -150,6 +151,11 @@ export interface DesignAsset {
   nftId?: string; // If minted
   // Real World Verification
   installationProof?: InstallationProof;
+  geolocation?: {
+      lat: number;
+      lng: number;
+      timezone: string;
+  };
 }
 
 export interface NFTMetadata {
@@ -384,6 +390,20 @@ export interface Vote {
     support: boolean;
     power: number;
     timestamp: number;
+}
+
+// Design Challenges (New)
+export interface DesignChallenge {
+    id: string;
+    title: string;
+    description: string;
+    rewardARTX: number; 
+    sponsorDAO: string; // e.g., "Sustainability Guild"
+    deadline: number;
+    participants: number;
+    status: 'ACTIVE' | 'VOTING' | 'CLOSED';
+    requirements: string[];
+    thumbnailUrl: string;
 }
 
 // Oracle Types
