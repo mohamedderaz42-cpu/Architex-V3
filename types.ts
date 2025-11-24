@@ -176,6 +176,16 @@ export interface UserStake {
   unclaimedRewards: number;
 }
 
+// Oracle Types
+export interface OracleQuote {
+  pair: string; // e.g., 'ARTX/Pi'
+  rate: number;
+  timestamp: number;
+  source: 'DEX_AGGREGATOR' | 'RESERVE_BANK' | 'MARKET_MAKER';
+  confidenceScore: number; // 0.0 - 1.0
+  signature?: string; // Simulating cryptographic proof
+}
+
 // Admin & Analytics
 export interface AdminSession {
   isAuthenticated: boolean;

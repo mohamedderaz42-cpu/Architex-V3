@@ -1,7 +1,9 @@
+
 import React, { useEffect, useState } from 'react';
 import { GlassCard } from '../components/GlassCard';
 import { stellarService } from '../services/stellarService';
-import { ChainBalance, OrderBookData } from '../types';
+import { oracleService } from '../services/oracleService';
+import { ChainBalance, OrderBookData, OracleQuote } from '../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export const DeFiDashboard: React.FC = () => {
@@ -9,6 +11,11 @@ export const DeFiDashboard: React.FC = () => {
   const [piBalance, setPiBalance] = useState<string>('0.00');
   const [orderBook, setOrderBook] = useState<OrderBookData | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Oracle & Calculator State
+  const [oracleRate, setOracleRate] = useState<OracleQuote | null>(null);
+  const [swapInput, setSwapInput] = useState('');
+  const [swapOutput, setSwapOutput] = useState('');
   
   // Mock User Address
   const DEMO_PUBLIC_KEY = 'PI_USER_WALLET_ADDRESS_EXAMPLE'; 
@@ -18,16 +25,17 @@ export const DeFiDashboard: React.FC = () => {
       setLoading(true);
       
       // 1. Fetch Balances & Orderbook
-      const [stellarBal, piBal, obData] = await Promise.all([
+      const [stellarBal, piBal, obData, rateData] = await Promise.all([
         stellarService.getChainBalances(DEMO_PUBLIC_KEY),
         stellarService.getPiBalance(),
-        // Get simulated orderbook for ARTX/Pi pair
-        stellarService.getOrderBook('ARTX', 'Pi')
+        stellarService.getOrderBook('ARTX', 'Pi'),
+        oracleService.getQuote('ARTX/Pi')
       ]);
 
       setBalances(stellarBal);
       setPiBalance(piBal);
       setOrderBook(obData);
+      setOracleRate(rateData);
       setLoading(false);
     };
 
@@ -35,6 +43,22 @@ export const DeFiDashboard: React.FC = () => {
     const interval = setInterval(fetchData, 10000); // Poll every 10s
     return () => clearInterval(interval);
   }, []);
+
+  // Calculator Logic
+  const handleSwapInputChange = (val: string) => {
+    setSwapInput(val);
+    if (!oracleRate || !val) {
+        setSwapOutput('');
+        return;
+    }
+    const amount = parseFloat(val);
+    if (!isNaN(amount)) {
+        // Pi -> ARTX (Divide by rate because rate is Price of 1 ARTX in Pi)
+        // Rate ~0.42 Pi per ARTX. So 1 Pi = 2.38 ARTX.
+        const output = amount / oracleRate.rate;
+        setSwapOutput(output.toFixed(4));
+    }
+  };
 
   return (
     <div className="space-y-6 animate-[fadeIn_0.5s_ease-out]">
@@ -81,20 +105,51 @@ export const DeFiDashboard: React.FC = () => {
              </div>
         </GlassCard>
 
-        <GlassCard>
-            <h3 className="text-gray-400 text-xs font-bold uppercase mb-4">Quick Swap (DEX)</h3>
+        {/* Oracle Powered Swap */}
+        <GlassCard className="relative">
+            <div className="flex justify-between items-center mb-4">
+                 <h3 className="text-gray-400 text-xs font-bold uppercase">Quick Swap (DEX)</h3>
+                 {oracleRate && (
+                     <div className="flex items-center gap-1 text-[10px] text-green-400 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20" title="Price verified by Internal Oracle">
+                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                         Oracle Verified
+                     </div>
+                 )}
+            </div>
+            
             <div className="space-y-3">
-                <div className="flex items-center gap-2 bg-black/30 p-2 rounded border border-white/10">
-                    <input type="number" placeholder="0.00" className="bg-transparent w-full outline-none text-white text-right" />
-                    <span className="text-sm font-bold text-neon-cyan">Pi</span>
+                <div className="flex items-center gap-2 bg-black/30 p-2 rounded border border-white/10 focus-within:border-orange-500/50 transition-colors">
+                    <input 
+                        type="number" 
+                        value={swapInput}
+                        onChange={(e) => handleSwapInputChange(e.target.value)}
+                        placeholder="0.00" 
+                        className="bg-transparent w-full outline-none text-white text-right font-mono" 
+                    />
+                    <span className="text-sm font-bold text-orange-500 w-12 text-center">Pi</span>
                 </div>
-                <div className="flex justify-center text-gray-500">↓</div>
-                <div className="flex items-center gap-2 bg-black/30 p-2 rounded border border-white/10">
-                    <input type="number" placeholder="0.00" readOnly className="bg-transparent w-full outline-none text-gray-400 text-right" />
-                    <span className="text-sm font-bold text-neon-purple">ARTX</span>
+                
+                <div className="flex justify-between items-center text-xs text-gray-500 px-1">
+                    <span>Rate: 1 ARTX = {oracleRate?.rate.toFixed(4)} Pi</span>
+                    <span className="transform rotate-90 md:rotate-0">↓</span>
                 </div>
-                <button className="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-sm transition-colors">
-                    Calculate Rate
+
+                <div className="flex items-center gap-2 bg-black/30 p-2 rounded border border-white/10">
+                    <input 
+                        type="number" 
+                        value={swapOutput}
+                        readOnly 
+                        placeholder="0.00" 
+                        className="bg-transparent w-full outline-none text-neon-purple text-right font-mono font-bold" 
+                    />
+                    <span className="text-sm font-bold text-neon-purple w-12 text-center">ARTX</span>
+                </div>
+                
+                <button 
+                    disabled={!swapInput || parseFloat(swapInput) <= 0}
+                    className="w-full py-2 bg-white/5 hover:bg-neon-purple/20 border border-white/10 hover:border-neon-purple/50 rounded text-sm transition-all text-white font-bold disabled:opacity-50"
+                >
+                    Swap Assets
                 </button>
             </div>
         </GlassCard>
