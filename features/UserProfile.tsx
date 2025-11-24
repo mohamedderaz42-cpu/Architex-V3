@@ -1,8 +1,9 @@
 
-import React, { useEffect, useState } from 'react';
+
+import React, { useEffect, useState, useRef } from 'react';
 import { UserSession, DesignAsset } from '../types';
 import { GlassCard } from '../components/GlassCard';
-import { dalGetUserDesigns } from '../services/dataAccessLayer';
+import { dalGetUserDesigns, dalSubmitInstallationProof } from '../services/dataAccessLayer';
 import { piService } from '../services/piService';
 import { oracleService } from '../services/oracleService';
 import { UI_CONSTANTS, PAYMENT_CONFIG } from '../constants';
@@ -24,13 +25,19 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session }) => {
   const [apiResponse, setApiResponse] = useState<string | null>(null);
   const [loadingApi, setLoadingApi] = useState(false);
 
+  // Proof Upload State
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingDesignId, setUploadingDesignId] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+
   useEffect(() => {
-    const fetchDesigns = async () => {
-      const data = await dalGetUserDesigns();
-      setPortfolio(data);
-    };
     fetchDesigns();
   }, []);
+
+  const fetchDesigns = async () => {
+    const data = await dalGetUserDesigns();
+    setPortfolio(data);
+  };
 
   const handleSubscribe = async (tierName: string, cost: number, isApi: boolean = false) => {
     setSubscribingTier(tierName);
@@ -74,6 +81,43 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session }) => {
       } finally {
           setLoadingApi(false);
       }
+  };
+
+  const triggerUpload = (designId: string) => {
+      setUploadingDesignId(designId);
+      fileInputRef.current?.click();
+  };
+
+  const handleProofUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!e.target.files || !e.target.files[0] || !uploadingDesignId) return;
+      
+      const file = e.target.files[0];
+      const reader = new FileReader();
+
+      setIsVerifying(true);
+
+      reader.onloadend = async () => {
+          const base64String = reader.result as string;
+          const base64Data = base64String.split(',')[1];
+          
+          try {
+             const result = await dalSubmitInstallationProof(uploadingDesignId, base64Data);
+             if (result.success) {
+                 alert(`Verification Successful! +${result.reward} ARTX Cashback has been granted.`);
+                 fetchDesigns(); // Refresh UI
+             } else {
+                 alert(`Verification Failed: ${result.reason}`);
+             }
+          } catch (err) {
+             alert("Error submitting proof.");
+          } finally {
+             setIsVerifying(false);
+             setUploadingDesignId(null);
+             if (fileInputRef.current) fileInputRef.current.value = '';
+          }
+      };
+
+      reader.readAsDataURL(file);
   };
 
   return (
@@ -171,23 +215,79 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session }) => {
         </button>
       </div>
 
+      {/* Hidden File Input for Proofs */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleProofUpload} 
+        accept="image/*" 
+        className="hidden" 
+      />
+
       {/* View Content */}
       {activeTab === 'PORTFOLIO' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {portfolio.map(design => (
-                <GlassCard key={design.id} className="group !p-0 overflow-hidden relative">
-                    <img src={design.thumbnailUrl} alt={design.title} className="w-full h-48 object-cover" />
-                    <div className="p-4">
-                        <h3 className="font-bold text-white">{design.title}</h3>
-                        <div className="flex justify-between items-center mt-2 text-xs text-gray-400">
-                            <span>{new Date(design.timestamp).toLocaleDateString()}</span>
-                            <span className={design.status === 'LOCKED' ? 'text-orange-400' : 'text-green-400'}>
-                                {design.status}
-                            </span>
+            {portfolio.map(design => {
+                const proofStatus = design.installationProof?.status || 'NONE';
+                const isProofVerified = proofStatus === 'VERIFIED';
+                const isProofPending = proofStatus === 'PENDING';
+                const isProofRejected = proofStatus === 'REJECTED';
+
+                return (
+                    <GlassCard key={design.id} className="group !p-0 overflow-hidden relative flex flex-col h-full">
+                        <img src={design.thumbnailUrl} alt={design.title} className="w-full h-48 object-cover" />
+                        <div className="p-4 flex-1 flex flex-col justify-between">
+                            <div>
+                                <h3 className="font-bold text-white">{design.title}</h3>
+                                <div className="flex justify-between items-center mt-2 text-xs text-gray-400">
+                                    <span>{new Date(design.timestamp).toLocaleDateString()}</span>
+                                    <span className={design.status === 'LOCKED' ? 'text-orange-400' : 'text-green-400'}>
+                                        {design.status}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            {/* Cashback / Proof of Build Section */}
+                            {(design.status === 'UNLOCKED' || design.status === 'MINTED') && (
+                                <div className="mt-4 pt-4 border-t border-white/5">
+                                    {isProofVerified ? (
+                                        <div className="bg-green-500/10 border border-green-500/30 rounded p-2 flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                            </div>
+                                            <div>
+                                                <div className="text-xs font-bold text-green-400">Verified Build</div>
+                                                <div className="text-[10px] text-gray-400">+{design.installationProof?.rewardAmount} ARTX Cashback</div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            {isProofRejected && (
+                                                <div className="text-[10px] text-red-400 mb-2">Verification Failed. Try a clearer photo.</div>
+                                            )}
+                                            <button 
+                                                onClick={() => triggerUpload(design.id)}
+                                                disabled={isVerifying && uploadingDesignId === design.id}
+                                                className="w-full py-2 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 hover:from-indigo-500/30 hover:to-purple-500/30 border border-white/10 rounded-lg text-xs font-bold text-gray-300 hover:text-white transition-all flex items-center justify-center gap-2"
+                                            >
+                                                {isVerifying && uploadingDesignId === design.id ? (
+                                                    <span className="animate-pulse">Analyzing...</span>
+                                                ) : (
+                                                    <>
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                                        Upload Proof of Build
+                                                    </>
+                                                )}
+                                            </button>
+                                            <div className="text-[10px] text-center text-gray-500 mt-1">Get 25 ARTX Cashback</div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
-                    </div>
-                </GlassCard>
-            ))}
+                    </GlassCard>
+                );
+            })}
         </div>
       ) : (
         /* DEVELOPER API VIEW */

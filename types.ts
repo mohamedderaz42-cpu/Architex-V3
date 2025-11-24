@@ -102,6 +102,13 @@ export interface AppConfig {
 // Payment & Asset Logic
 export type AssetStatus = 'GENERATING' | 'LOCKED' | 'UNLOCKED' | 'MINTED';
 
+export interface InstallationProof {
+  status: 'NONE' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+  imageUrl?: string;
+  timestamp?: number;
+  rewardAmount?: number;
+}
+
 export interface DesignAsset {
   id: string;
   title: string;
@@ -117,6 +124,8 @@ export interface DesignAsset {
   likes: number;
   views: number;
   nftId?: string; // If minted
+  // Real World Verification
+  installationProof?: InstallationProof;
 }
 
 export interface NFTMetadata {

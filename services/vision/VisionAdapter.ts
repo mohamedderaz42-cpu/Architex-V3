@@ -55,6 +55,52 @@ class VisionAdapter implements IVisionAdapter {
     }
   }
 
+  // New Method: Verify Proof-of-Physical-Installation
+  async verifyRealization(imageBase64: string): Promise<{ verified: boolean; confidence: number; comment: string }> {
+    try {
+        const prompt = `
+            Analyze this image. Does it appear to be a completed, physical architectural structure, construction project, or manufactured object in the real world?
+            Distinguish between a digital render and a real photograph.
+            Return ONLY a JSON object with this structure:
+            {
+                "isRealized": boolean, (true if it looks like a real physical object/building)
+                "confidence": number, (0.0 to 1.0)
+                "comment": "string" (short verification reason, e.g. "Realistic lighting and natural environment detected.")
+            }
+            Strict JSON. No markdown.
+        `;
+
+        const response = await aiAdapter.generate({
+            prompt: prompt,
+            images: [{
+                mimeType: 'image/jpeg',
+                data: imageBase64
+            }],
+            config: {
+                temperature: 0.1, // Very precise
+                maxTokens: 150
+            }
+        });
+
+        const cleanText = response.text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const result = JSON.parse(cleanText);
+
+        return {
+            verified: result.isRealized,
+            confidence: result.confidence,
+            comment: result.comment
+        };
+
+    } catch (error) {
+        console.error("Verification Logic Error", error);
+        return {
+            verified: false,
+            confidence: 0,
+            comment: "AI Analysis failed to process image."
+        };
+    }
+  }
+
   // Helper to simulate SLAM point cloud data retrieval for the UI
   getSLAMMetrics() {
     return {

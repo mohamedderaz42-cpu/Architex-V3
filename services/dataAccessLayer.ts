@@ -2,6 +2,7 @@
 
 import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
+import { visionAdapter } from "./vision/VisionAdapter";
 
 // Represents the compliant headers required by Pi Network distributed backend
 const PI_HEADERS = {
@@ -28,7 +29,8 @@ let mockDesigns: DesignAsset[] = [
     author: 'PiUser_Alpha',
     authorAvatar: CURRENT_USER_AVATAR,
     likes: 124,
-    views: 450
+    views: 450,
+    installationProof: { status: 'NONE' }
   }
 ];
 
@@ -146,7 +148,8 @@ export const dalGenerateBlueprint = async (scanData: any): Promise<DesignAsset> 
         author: 'PiUser_Alpha',
         authorAvatar: CURRENT_USER_AVATAR,
         likes: 0,
-        views: 0
+        views: 0,
+        installationProof: { status: 'NONE' }
     };
     
     mockDesigns.unshift(newDesign);
@@ -176,6 +179,38 @@ export const dalUnlockDesign = async (paymentId: string, designId: string): Prom
         return mockDesigns[designIndex];
     }
     return null;
+};
+
+export const dalSubmitInstallationProof = async (designId: string, imageBase64: string): Promise<{ success: boolean; reward?: number; reason?: string }> => {
+    // 1. Find Design
+    const idx = mockDesigns.findIndex(d => d.id === designId);
+    if (idx === -1) return { success: false, reason: "Design not found" };
+
+    // 2. Call AI Verification
+    const verification = await visionAdapter.verifyRealization(imageBase64);
+
+    if (verification.verified && verification.confidence > 0.7) {
+        const reward = 25.0; // Fixed Cashback for now
+
+        // 3. Update Status
+        mockDesigns[idx].installationProof = {
+            status: 'VERIFIED',
+            imageUrl: `data:image/jpeg;base64,${imageBase64.substring(0, 100)}...`, // Truncated for mock
+            timestamp: Date.now(),
+            rewardAmount: reward
+        };
+
+        // Note: Actual balance update would happen in a real ledger transaction here.
+        // For simulation, we assume the UI will reflect this from the asset state.
+
+        return { success: true, reward };
+    } else {
+        mockDesigns[idx].installationProof = {
+            status: 'REJECTED',
+            timestamp: Date.now()
+        };
+        return { success: false, reason: verification.comment || "AI could not verify physical installation." };
+    }
 };
 
 // --- Messaging Methods ---
