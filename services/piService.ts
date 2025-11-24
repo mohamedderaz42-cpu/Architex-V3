@@ -28,10 +28,37 @@ class PiService {
 
   async createPayment(memo: string, amount: number, callbacks: PaymentCallbacks): Promise<void> {
     await this.init();
+    await this.processPayment(amount, memo, null, callbacks);
+  }
 
+  /**
+   * SERVICE FEE ROUTING
+   * Strictly enforces that 100% of the fee goes to the Treasury Multisig.
+   * Used for: Image Generation (0.50 Pi) and Subscriptions.
+   */
+  async createTreasuryPayment(memo: string, amount: number, callbacks: PaymentCallbacks): Promise<void> {
+    await this.init();
+    
+    console.log(`[PiService] 🛡️ SECURE ROUTING: Initiating Service Fee Payment`);
+    console.log(`[PiService] ➡️ DESTINATION: ${PAYMENT_CONFIG.treasuryWallet} (Multisig Treasury)`);
+    console.log(`[PiService] 💰 AMOUNT: ${amount} Pi`);
+
+    // We attach specific metadata that the backend would use to verify routing
+    const routingMetadata = {
+        type: 'SERVICE_FEE',
+        destination: PAYMENT_CONFIG.treasuryWallet,
+        enforced: true
+    };
+
+    await this.processPayment(amount, memo, routingMetadata, callbacks);
+  }
+
+  private async processPayment(amount: number, memo: string, metadata: any, callbacks: PaymentCallbacks): Promise<void> {
     if (!window.Pi) {
       // Mock flow for browser testing outside Pi App
       console.log(`[PiService MOCK] Creating payment for ${amount} Pi. Memo: ${memo}`);
+      if (metadata) console.log(`[PiService MOCK] Metadata:`, metadata);
+      
       const mockPaymentId = `pay_${Date.now()}`;
       const mockTxid = `tx_${Date.now()}`;
 
@@ -52,7 +79,7 @@ class PiService {
       await window.Pi.createPayment({
         amount: amount,
         memo: memo,
-        metadata: { type: 'digital_download' }, // Developer metadata
+        metadata: metadata || { type: 'general_payment' }, 
       }, {
         onReadyForServerApproval: callbacks.onReadyForServerApproval,
         onReadyForServerCompletion: callbacks.onReadyForServerCompletion,

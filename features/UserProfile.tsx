@@ -3,7 +3,8 @@ import React, { useEffect, useState } from 'react';
 import { UserSession, DesignAsset } from '../types';
 import { GlassCard } from '../components/GlassCard';
 import { dalGetUserDesigns } from '../services/dataAccessLayer';
-import { UI_CONSTANTS } from '../constants';
+import { piService } from '../services/piService';
+import { UI_CONSTANTS, PAYMENT_CONFIG } from '../constants';
 
 interface UserProfileProps {
   session: UserSession;
@@ -11,6 +12,7 @@ interface UserProfileProps {
 
 export const UserProfile: React.FC<UserProfileProps> = ({ session }) => {
   const [portfolio, setPortfolio] = useState<DesignAsset[]>([]);
+  const [isSubscribing, setIsSubscribing] = useState(false);
 
   useEffect(() => {
     const fetchDesigns = async () => {
@@ -19,6 +21,30 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session }) => {
     };
     fetchDesigns();
   }, []);
+
+  const handleSubscribe = async () => {
+    setIsSubscribing(true);
+    try {
+        await piService.createTreasuryPayment(
+            "Architex Pro Subscription (1 Month)",
+            PAYMENT_CONFIG.subscriptionCost,
+            {
+                onReadyForServerApproval: async (pid) => console.log("Sub intent approved", pid),
+                onReadyForServerCompletion: async (pid, txid) => {
+                    alert("Welcome to Pro! Subscription Fee routed to Treasury.");
+                    setIsSubscribing(false);
+                },
+                onCancel: () => setIsSubscribing(false),
+                onError: (e) => {
+                    alert("Subscription failed.");
+                    setIsSubscribing(false);
+                }
+            }
+        );
+    } catch (e) {
+        setIsSubscribing(false);
+    }
+  };
 
   return (
     <div className="space-y-8 animate-[fadeIn_0.5s_ease-out]">
@@ -58,6 +84,17 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session }) => {
             <p className="mt-4 text-gray-400 max-w-lg">
                 Architect & Generative Designer on the Pi Network. Creating sustainable structures for the metaverse and physical world.
             </p>
+
+            <div className="mt-4 flex gap-4 justify-center md:justify-start">
+                 <button 
+                    onClick={handleSubscribe}
+                    disabled={isSubscribing}
+                    className="px-4 py-2 bg-gradient-to-r from-yellow-600 to-yellow-500 text-white text-xs font-bold rounded-lg shadow-lg hover:shadow-yellow-500/20 transition-all flex items-center gap-2 disabled:opacity-50"
+                 >
+                    {isSubscribing ? 'Processing...' : `Upgrade to Pro (${PAYMENT_CONFIG.subscriptionCost} Pi)`}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                 </button>
+            </div>
           </div>
 
           {/* Key Stats */}

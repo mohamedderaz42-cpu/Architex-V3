@@ -33,18 +33,19 @@ export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) =>
   const handleUnlock = async (design: DesignAsset) => {
     setProcessingId(design.id);
     try {
-      await piService.createPayment(
-        `Unlock: ${design.title}`,
-        design.price,
+      // Use createTreasuryPayment to route the 0.50 Pi generation fee directly to the Multi-Sig Treasury
+      await piService.createTreasuryPayment(
+        `Generation Fee: ${design.title}`,
+        design.price, // 0.50 Pi
         {
           onReadyForServerApproval: async (paymentId) => {
-            console.log("Payment Approved by User, sending to backend...", paymentId);
+            console.log("Service Fee Approved by User, routing to Treasury...", paymentId);
           },
           onReadyForServerCompletion: async (paymentId, txid) => {
              const unlockedDesign = await dalUnlockDesign(paymentId, design.id);
              if (unlockedDesign) {
                  setDesigns(prev => prev.map(d => d.id === design.id ? unlockedDesign : d));
-                 alert(`Success! ${design.format} file unlocked.`);
+                 alert(`Success! Fee routed to Treasury. ${design.format} file unlocked.`);
              }
           },
           onCancel: (paymentId) => {
@@ -161,7 +162,7 @@ export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) =>
                     {design.status === 'LOCKED' ? (
                         <div>
                             <div className="flex justify-between items-end mb-3">
-                                <span className="text-xs text-neon-pink">Encryption Active</span>
+                                <span className="text-xs text-neon-pink">Image Gen Fee</span>
                                 <span className="text-xl font-bold text-neon-cyan">{design.price.toFixed(2)} Pi</span>
                             </div>
                             <button 
@@ -172,12 +173,12 @@ export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) =>
                                 {processingId === design.id ? (
                                     <>
                                         <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                        <span>Confirming...</span>
+                                        <span>Routing Fee...</span>
                                     </>
                                 ) : (
                                     <>
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                                        <span>Pay & Unlock High-Res</span>
+                                        <span>Pay Gen Fee (Treasury)</span>
                                     </>
                                 )}
                             </button>

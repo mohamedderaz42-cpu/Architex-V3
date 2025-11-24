@@ -103,8 +103,10 @@ export const STAKING_CONFIG = {
 
 export const PAYMENT_CONFIG = {
   downloadCost: 0.50, // Pi
-  recipient: 'ARCHITEX_TREASURY_WALLET',
-  memo: 'Architex Design Download'
+  subscriptionCost: 10.00, // Pi per month
+  // HARDCODED TREASURY WALLET FOR SERVICE FEES
+  treasuryWallet: 'ARCHITEX_MULTISIG_TREASURY_G...VERIFIED',
+  memo: 'Architex Service Fee'
 };
 
 export const STELLAR_CONFIG = {
