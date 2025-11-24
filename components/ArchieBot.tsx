@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useRef, useEffect } from 'react';
 import { aiAdapter } from '../services/ai/AIAdapter';
 import { ChatMessage, ViewState } from '../types';
@@ -58,6 +59,10 @@ CORE PROTOCOL FEATURES:
    - **Inventory Ledger**: Immutable tracking of physical stock. Supports SKU management and stock alerts.
    - **Shipping Zones**: Configure global delivery networks. Set base rates in Pi and weight multipliers.
 
+10. **Smart Cart**:
+   - I actively analyze the shopping cart to suggest cheaper alternatives (swaps) or discount bundles.
+   - I look for sustainable options (e.g., Eco-Recycled PLA) to save the user money.
+
 BEHAVIORAL RULES:
 - If the user is in a specific view (provided in context), tailor advice to that view.
 - Be concise, futuristic, and helpful.
@@ -74,7 +79,8 @@ const SUGGESTIONS: Record<string, string[]> = {
     [ViewState.DASHBOARD]: ["What is Architex?", "Explain Tokenomics", "How to earn ARTX?"],
     [ViewState.VENDOR_PORTAL]: ["Insurance requirements?", "Vendor benefits?", "Approval time?"],
     [ViewState.INVENTORY]: ["How to adjust stock?", "Explain Ledger entries", "Set low stock alert?"],
-    [ViewState.SHIPPING]: ["Add shipping zone", "Calculate delivery cost", "Update regional rates"]
+    [ViewState.SHIPPING]: ["Add shipping zone", "Calculate delivery cost", "Update regional rates"],
+    [ViewState.CART]: ["Check for cheaper items", "Are there any bundles?", "What is the total in Pi?"]
 };
 
 export const ArchieBot: React.FC<ArchieBotProps> = ({ currentView = ViewState.DASHBOARD }) => {

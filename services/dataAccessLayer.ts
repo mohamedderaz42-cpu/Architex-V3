@@ -1,6 +1,6 @@
 
 
-import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone } from "../types";
+import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
 import { visionAdapter } from "./vision/VisionAdapter";
 
@@ -28,10 +28,19 @@ let mockVendorProfile: VendorApplication = {
 };
 
 // Mock Inventory Data
+// NOTE: inv_1 quantity set to 2 to trigger conflict with default cart (which requests 5)
 let mockInventory: InventoryItem[] = [
-    { id: 'inv_1', sku: 'MAT-PLA-001', name: 'PLA Filament (High Grade)', category: 'MATERIAL', quantity: 45, unitPrice: 2.50, location: 'Warehouse A', lowStockThreshold: 10, lastUpdated: Date.now() },
+    { id: 'inv_1', sku: 'MAT-PLA-001', name: 'PLA Filament (High Grade)', category: 'MATERIAL', quantity: 2, unitPrice: 2.50, location: 'Warehouse A', lowStockThreshold: 10, lastUpdated: Date.now() },
+    { id: 'inv_1_eco', sku: 'MAT-ECO-001', name: 'PLA Eco-Recycled', category: 'MATERIAL', quantity: 100, unitPrice: 1.50, location: 'Warehouse A', lowStockThreshold: 10, lastUpdated: Date.now() },
     { id: 'inv_2', sku: 'KIT-HAB-SML', name: 'Micro-Habitat Kit', category: 'KIT', quantity: 8, unitPrice: 150.00, location: 'Warehouse B', lowStockThreshold: 15, lastUpdated: Date.now() },
+    { id: 'inv_2_b', sku: 'ACC-SOL-PNL', name: 'Solar Cell Add-on', category: 'MERCH', quantity: 50, unitPrice: 25.00, location: 'Warehouse B', lowStockThreshold: 5, lastUpdated: Date.now() },
     { id: 'inv_3', sku: 'TOOL-SCN-HND', name: 'Handheld 3D Scanner', category: 'TOOL', quantity: 3, unitPrice: 450.00, location: 'Secure Vault', lowStockThreshold: 2, lastUpdated: Date.now() }
+];
+
+// Mock Cart State
+let mockCart: CartItem[] = [
+    { ...mockInventory[0], cartQuantity: 5 }, // 5 Spools of Expensive PLA (Triggers conflict since qty is 2)
+    { ...mockInventory[2], cartQuantity: 1 }  // 1 Habitat Kit
 ];
 
 let mockLedger: LedgerEntry[] = [
@@ -337,6 +346,151 @@ export const dalUpdateShippingZone = async (zone: ShippingZone): Promise<boolean
     return true;
 };
 
+// --- Smart Cart & AI Suggestion Methods ---
+
+export const dalGetCart = async (): Promise<CartItem[]> => {
+    return [...mockCart];
+};
+
+export const dalAddToCart = async (item: InventoryItem, qty: number = 1): Promise<void> => {
+    const idx = mockCart.findIndex(i => i.id === item.id);
+    if (idx > -1) {
+        mockCart[idx].cartQuantity += qty;
+    } else {
+        mockCart.push({ ...item, cartQuantity: qty });
+    }
+};
+
+export const dalRemoveFromCart = async (itemId: string): Promise<void> => {
+    mockCart = mockCart.filter(i => i.id !== itemId);
+};
+
+export const dalGetSmartSuggestions = async (): Promise<SmartSuggestion[]> => {
+    await new Promise(r => setTimeout(r, 600)); // Simulate AI processing
+    const suggestions: SmartSuggestion[] = [];
+
+    mockCart.forEach(cartItem => {
+        // 1. CHEAPER ALTERNATIVE CHECK
+        // Scenario: User has 'High Grade' PLA (2.50), suggest 'Eco' (1.50)
+        if (cartItem.sku === 'MAT-PLA-001') {
+            const ecoAlternative = mockInventory.find(i => i.sku === 'MAT-ECO-001');
+            if (ecoAlternative) {
+                const savingsPerUnit = cartItem.unitPrice - ecoAlternative.unitPrice;
+                const totalSavings = savingsPerUnit * cartItem.cartQuantity;
+                
+                suggestions.push({
+                    id: 'sugg_swap_pla',
+                    type: 'ALTERNATIVE',
+                    originalItemId: cartItem.id,
+                    suggestedItem: ecoAlternative,
+                    message: "Switching to Eco-Recycled PLA maintains structural integrity for standard prints while reducing cost.",
+                    savingsAmount: totalSavings,
+                    savingsPercent: Math.round((savingsPerUnit / cartItem.unitPrice) * 100)
+                });
+            }
+        }
+
+        // 2. BUNDLE OPPORTUNITY CHECK
+        // Scenario: User has 'Habitat Kit', suggest 'Solar Panel'
+        if (cartItem.sku === 'KIT-HAB-SML') {
+            const solarAddon = mockInventory.find(i => i.sku === 'ACC-SOL-PNL');
+            const hasSolarInCart = mockCart.some(i => i.sku === 'ACC-SOL-PNL');
+            
+            if (solarAddon && !hasSolarInCart) {
+                // Bundle deal: Buy solar with kit, get 5 Pi off
+                const discount = 5.0;
+                suggestions.push({
+                    id: 'sugg_bundle_solar',
+                    type: 'BUNDLE',
+                    suggestedItem: solarAddon,
+                    message: "Optimization: Habitats require power. Bundle a Solar Cell now to save 5 Pi on shipping and assembly.",
+                    savingsAmount: discount,
+                    savingsPercent: 15 // Approx
+                });
+            }
+        }
+    });
+
+    return suggestions;
+};
+
+export const dalApplySuggestion = async (suggestion: SmartSuggestion): Promise<void> => {
+    if (suggestion.type === 'ALTERNATIVE' && suggestion.originalItemId) {
+        // Find quantity of original item
+        const original = mockCart.find(i => i.id === suggestion.originalItemId);
+        if (original) {
+            // Remove original
+            mockCart = mockCart.filter(i => i.id !== suggestion.originalItemId);
+            // Add new item with same quantity
+            await dalAddToCart(suggestion.suggestedItem, original.cartQuantity);
+        }
+    } else if (suggestion.type === 'BUNDLE') {
+        // Add bundled item
+        await dalAddToCart(suggestion.suggestedItem, 1);
+    }
+};
+
+export const dalCheckout = async (): Promise<CheckoutResult> => {
+    await new Promise(r => setTimeout(r, 1500)); // Simulate checkout delay
+
+    // 1. Stock Check
+    for (const cartItem of mockCart) {
+        const stockItem = mockInventory.find(i => i.id === cartItem.id);
+        
+        // Check for stockout or discrepancies
+        if (!stockItem || stockItem.quantity < cartItem.cartQuantity) {
+            
+            // AI Resolution Search: Find substitute in same category
+            const alternative = mockInventory.find(i => 
+                i.category === stockItem?.category && 
+                i.id !== stockItem?.id && 
+                i.quantity >= cartItem.cartQuantity
+            );
+
+            let suggestion: SmartSuggestion | undefined;
+            if (alternative) {
+                const diff = (cartItem.unitPrice - alternative.unitPrice) * cartItem.cartQuantity;
+                suggestion = {
+                    id: `conflict_sol_${Date.now()}`,
+                    type: 'ALTERNATIVE',
+                    originalItemId: cartItem.id,
+                    suggestedItem: alternative,
+                    message: `Critical Stock Alert: '${cartItem.name}' sold out. Instant swap to '${alternative.name}' available.`,
+                    savingsAmount: diff,
+                    savingsPercent: 0
+                };
+            }
+
+            return {
+                success: false,
+                conflict: {
+                    conflictingItemId: cartItem.id,
+                    itemName: cartItem.name,
+                    availableQuantity: stockItem ? stockItem.quantity : 0,
+                    requestedQuantity: cartItem.cartQuantity,
+                    resolutionSuggestion: suggestion
+                }
+            };
+        }
+    }
+
+    // 2. Process Order & Deduct Stock
+    mockInventory = mockInventory.map(inv => {
+        const inCart = mockCart.find(c => c.id === inv.id);
+        if (inCart) {
+            // Update quantity
+            return { ...inv, quantity: inv.quantity - inCart.cartQuantity };
+        }
+        return inv;
+    });
+
+    mockCart = []; // Clear cart
+
+    return {
+        success: true,
+        orderId: `ORD-${Date.now().toString().substr(-6).toUpperCase()}`
+    };
+};
 
 // --- Messaging Methods ---
 

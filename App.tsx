@@ -2,6 +2,8 @@
 
 
 
+
+
 import React, { useState, useEffect } from 'react';
 import { ViewState, UserSession } from './types';
 import { Dashboard } from './features/Dashboard';
@@ -20,10 +22,12 @@ import { LegalEngine } from './features/LegalEngine'; // Import Legal Engine
 import { VendorPortal } from './features/VendorPortal'; // Import Vendor Portal
 import { InventoryLedger } from './features/InventoryLedger'; // Import Inventory
 import { ShippingZones } from './features/ShippingZones'; // Import Shipping
+import { SmartCart } from './features/SmartCart'; // Import Smart Cart
 import { GlassCard } from './components/GlassCard';
 import { ArchieBot } from './components/ArchieBot';
 import { initializeSession, handleAddTrustline } from './services/orchestrator';
 import { adsService } from './services/adsService'; // Import Ads Service
+import { dalGetCart } from './services/dataAccessLayer'; // Import Cart Access for Badge
 import { UI_CONSTANTS } from './constants';
 
 const App: React.FC = () => {
@@ -31,11 +35,24 @@ const App: React.FC = () => {
   const [session, setSession] = useState<UserSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeContextId, setActiveContextId] = useState<string | null>(null);
+  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     init();
     // Initialize Ads SDK on mount
     adsService.init();
+  }, []);
+
+  // Poll for cart updates (Mock approach, normally would use context/subscription)
+  useEffect(() => {
+    const updateCartCount = async () => {
+        const items = await dalGetCart();
+        const count = items.reduce((acc, item) => acc + item.cartQuantity, 0);
+        setCartCount(count);
+    };
+    updateCartCount();
+    const interval = setInterval(updateCartCount, 2000);
+    return () => clearInterval(interval);
   }, []);
 
   const init = async () => {
@@ -107,11 +124,24 @@ const App: React.FC = () => {
           <div className="w-px h-6 bg-white/20 mx-1 self-center hidden md:block"></div>
           <NavItem label="Vendor" target={ViewState.VENDOR_PORTAL} />
           <NavItem label="Stock" target={ViewState.INVENTORY} />
-          <NavItem label="Shipping" target={ViewState.SHIPPING} />
+          
+          {/* Cart Icon */}
+          <button 
+            onClick={() => handleNavigation(ViewState.CART)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors relative ${
+                view === ViewState.CART ? 'bg-neon-purple/20 text-neon-cyan border border-neon-purple/50' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <span>Cart</span>
+            {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-neon-pink rounded-full text-[10px] flex items-center justify-center text-white font-bold">
+                    {cartCount}
+                </span>
+            )}
+          </button>
           
           <div className="w-px h-6 bg-white/20 mx-1 self-center hidden md:block"></div>
           <NavItem label="Legal" target={ViewState.LEGAL} />
-          <NavItem label="Inbox" target={ViewState.MESSAGES} />
         </nav>
 
         {/* User Status */}
@@ -152,6 +182,7 @@ const App: React.FC = () => {
         {view === ViewState.VENDOR_PORTAL && <VendorPortal />}
         {view === ViewState.INVENTORY && <InventoryLedger />}
         {view === ViewState.SHIPPING && <ShippingZones />}
+        {view === ViewState.CART && <SmartCart />}
         
         {/* Admin Views */}
         {(view === ViewState.ADMIN_LOGIN || view === ViewState.ADMIN_PANEL) && (

@@ -20,7 +20,8 @@ export enum ViewState {
   LEGAL = 'LEGAL',
   VENDOR_PORTAL = 'VENDOR_PORTAL',
   INVENTORY = 'INVENTORY',
-  SHIPPING = 'SHIPPING'
+  SHIPPING = 'SHIPPING',
+  CART = 'CART'
 }
 
 export enum NetworkType {
@@ -193,6 +194,33 @@ export interface ShippingZone {
     incrementalRate: number; // Pi per unit/kg
     estimatedDeliveryDays: string;
     isActive: boolean;
+}
+
+// Smart Cart Types
+export interface CartItem extends InventoryItem {
+    cartQuantity: number;
+}
+
+export interface SmartSuggestion {
+    id: string;
+    type: 'ALTERNATIVE' | 'BUNDLE';
+    originalItemId?: string; // If swapping
+    suggestedItem: InventoryItem;
+    message: string;
+    savingsAmount: number; // In Pi
+    savingsPercent: number;
+}
+
+export interface CheckoutResult {
+    success: boolean;
+    orderId?: string;
+    conflict?: {
+        conflictingItemId: string;
+        itemName: string;
+        availableQuantity: number;
+        requestedQuantity: number;
+        resolutionSuggestion?: SmartSuggestion; // The AI swap suggestion
+    };
 }
 
 // Bounty Marketplace Types
