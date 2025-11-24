@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useEffect } from 'react';
 import { ViewState, UserSession } from './types';
 import { Dashboard } from './features/Dashboard';
@@ -17,6 +18,8 @@ import { NFTFactory } from './features/NFTFactory'; // Import NFT Factory
 import { StakingVault } from './features/StakingVault'; // Import Staking
 import { LegalEngine } from './features/LegalEngine'; // Import Legal Engine
 import { VendorPortal } from './features/VendorPortal'; // Import Vendor Portal
+import { InventoryLedger } from './features/InventoryLedger'; // Import Inventory
+import { ShippingZones } from './features/ShippingZones'; // Import Shipping
 import { GlassCard } from './components/GlassCard';
 import { ArchieBot } from './components/ArchieBot';
 import { initializeSession, handleAddTrustline } from './services/orchestrator';
@@ -97,10 +100,17 @@ const App: React.FC = () => {
           <NavItem label="DeFi" target={ViewState.DEFI} />
           <NavItem label="Staking" target={ViewState.STAKING} />
           <NavItem label="Bounties" target={ViewState.BOUNTIES} />
-          <NavItem label="Legal" target={ViewState.LEGAL} />
-          <NavItem label="Vendor" target={ViewState.VENDOR_PORTAL} />
           <NavItem label="Store" target={ViewState.BLUEPRINTS} />
           <NavItem label="Scan" target={ViewState.SCANNER} />
+          
+          {/* Vendor Group */}
+          <div className="w-px h-6 bg-white/20 mx-1 self-center hidden md:block"></div>
+          <NavItem label="Vendor" target={ViewState.VENDOR_PORTAL} />
+          <NavItem label="Stock" target={ViewState.INVENTORY} />
+          <NavItem label="Shipping" target={ViewState.SHIPPING} />
+          
+          <div className="w-px h-6 bg-white/20 mx-1 self-center hidden md:block"></div>
+          <NavItem label="Legal" target={ViewState.LEGAL} />
           <NavItem label="Inbox" target={ViewState.MESSAGES} />
         </nav>
 
@@ -140,6 +150,8 @@ const App: React.FC = () => {
         {view === ViewState.STAKING && <StakingVault />}
         {view === ViewState.LEGAL && <LegalEngine />}
         {view === ViewState.VENDOR_PORTAL && <VendorPortal />}
+        {view === ViewState.INVENTORY && <InventoryLedger />}
+        {view === ViewState.SHIPPING && <ShippingZones />}
         
         {/* Admin Views */}
         {(view === ViewState.ADMIN_LOGIN || view === ViewState.ADMIN_PANEL) && (

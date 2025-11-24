@@ -18,7 +18,9 @@ export enum ViewState {
   NFT_FACTORY = 'NFT_FACTORY',
   STAKING = 'STAKING',
   LEGAL = 'LEGAL',
-  VENDOR_PORTAL = 'VENDOR_PORTAL'
+  VENDOR_PORTAL = 'VENDOR_PORTAL',
+  INVENTORY = 'INVENTORY',
+  SHIPPING = 'SHIPPING'
 }
 
 export enum NetworkType {
@@ -157,6 +159,40 @@ export interface VendorApplication {
         verified: boolean;
     };
     submittedAt?: number;
+}
+
+// Inventory & Logistics Types
+export interface InventoryItem {
+    id: string;
+    sku: string;
+    name: string;
+    category: 'MATERIAL' | 'KIT' | 'TOOL' | 'MERCH';
+    quantity: number;
+    unitPrice: number; // In Pi
+    location: string;
+    lowStockThreshold: number;
+    lastUpdated: number;
+}
+
+export interface LedgerEntry {
+    id: string;
+    itemId: string;
+    itemName: string;
+    type: 'INBOUND' | 'OUTBOUND' | 'ADJUSTMENT';
+    quantity: number;
+    timestamp: number;
+    reason: string;
+    performedBy: string;
+}
+
+export interface ShippingZone {
+    id: string;
+    name: string;
+    regions: string[]; // Countries or States
+    baseRate: number; // Pi
+    incrementalRate: number; // Pi per unit/kg
+    estimatedDeliveryDays: string;
+    isActive: boolean;
 }
 
 // Bounty Marketplace Types

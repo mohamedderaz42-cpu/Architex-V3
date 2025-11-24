@@ -1,6 +1,6 @@
 
 
-import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication } from "../types";
+import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
 import { visionAdapter } from "./vision/VisionAdapter";
 
@@ -26,6 +26,26 @@ let mockVendorProfile: VendorApplication = {
     contactEmail: '',
     status: 'NOT_APPLIED'
 };
+
+// Mock Inventory Data
+let mockInventory: InventoryItem[] = [
+    { id: 'inv_1', sku: 'MAT-PLA-001', name: 'PLA Filament (High Grade)', category: 'MATERIAL', quantity: 45, unitPrice: 2.50, location: 'Warehouse A', lowStockThreshold: 10, lastUpdated: Date.now() },
+    { id: 'inv_2', sku: 'KIT-HAB-SML', name: 'Micro-Habitat Kit', category: 'KIT', quantity: 8, unitPrice: 150.00, location: 'Warehouse B', lowStockThreshold: 15, lastUpdated: Date.now() },
+    { id: 'inv_3', sku: 'TOOL-SCN-HND', name: 'Handheld 3D Scanner', category: 'TOOL', quantity: 3, unitPrice: 450.00, location: 'Secure Vault', lowStockThreshold: 2, lastUpdated: Date.now() }
+];
+
+let mockLedger: LedgerEntry[] = [
+    { id: 'led_1', itemId: 'inv_1', itemName: 'PLA Filament (High Grade)', type: 'INBOUND', quantity: 50, timestamp: Date.now() - 10000000, reason: 'Initial Stock', performedBy: 'System' },
+    { id: 'led_2', itemId: 'inv_2', itemName: 'Micro-Habitat Kit', type: 'OUTBOUND', quantity: 2, timestamp: Date.now() - 5000000, reason: 'Order #4421', performedBy: 'LogisticsBot' }
+];
+
+// Mock Shipping Zones
+let mockShippingZones: ShippingZone[] = [
+    { id: 'zone_1', name: 'North America', regions: ['USA', 'Canada', 'Mexico'], baseRate: 5.0, incrementalRate: 1.5, estimatedDeliveryDays: '3-5', isActive: true },
+    { id: 'zone_2', name: 'European Union', regions: ['Germany', 'France', 'Spain', 'Italy'], baseRate: 8.0, incrementalRate: 2.0, estimatedDeliveryDays: '5-7', isActive: true },
+    { id: 'zone_3', name: 'Asia Pacific', regions: ['Japan', 'South Korea', 'Singapore'], baseRate: 12.0, incrementalRate: 3.0, estimatedDeliveryDays: '7-14', isActive: true }
+];
+
 
 // In-memory store for session (Mock DB)
 let mockDesigns: DesignAsset[] = [
@@ -258,6 +278,63 @@ export const dalSubmitVendorApplication = async (data: Partial<VendorApplication
     }
 
     return { ...mockVendorProfile };
+};
+
+// --- Inventory & Logistics Methods ---
+
+export const dalGetInventory = async (): Promise<InventoryItem[]> => {
+    return [...mockInventory];
+};
+
+export const dalGetLedger = async (): Promise<LedgerEntry[]> => {
+    // Sort by newest first
+    return [...mockLedger].sort((a, b) => b.timestamp - a.timestamp);
+};
+
+export const dalAdjustStock = async (itemId: string, quantityDelta: number, reason: string): Promise<boolean> => {
+    const idx = mockInventory.findIndex(i => i.id === itemId);
+    if (idx === -1) return false;
+
+    const item = mockInventory[idx];
+    const newQuantity = item.quantity + quantityDelta;
+
+    if (newQuantity < 0) return false; // Prevent negative stock for this demo
+
+    // Update Item
+    mockInventory[idx] = {
+        ...item,
+        quantity: newQuantity,
+        lastUpdated: Date.now()
+    };
+
+    // Add Ledger Entry
+    const entry: LedgerEntry = {
+        id: `led_${Date.now()}`,
+        itemId,
+        itemName: item.name,
+        type: quantityDelta > 0 ? 'INBOUND' : 'OUTBOUND',
+        quantity: Math.abs(quantityDelta),
+        timestamp: Date.now(),
+        reason,
+        performedBy: 'PiUser_Alpha' // Mock user
+    };
+    mockLedger.unshift(entry);
+
+    return true;
+};
+
+export const dalGetShippingZones = async (): Promise<ShippingZone[]> => {
+    return [...mockShippingZones];
+};
+
+export const dalUpdateShippingZone = async (zone: ShippingZone): Promise<boolean> => {
+    const idx = mockShippingZones.findIndex(z => z.id === zone.id);
+    if (idx > -1) {
+        mockShippingZones[idx] = zone;
+    } else {
+        mockShippingZones.push(zone);
+    }
+    return true;
 };
 
 
