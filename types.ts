@@ -248,7 +248,7 @@ export interface ShippingZone {
 }
 
 // Order Management Types
-export type OrderStatus = 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'PENDING_VERIFICATION';
+export type OrderStatus = 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'PENDING_VERIFICATION' | 'AWAITING_APPROVAL';
 
 export interface Order {
     id: string;
@@ -263,6 +263,7 @@ export interface Order {
     payoutStatus?: 'ESCROWED' | 'RELEASED' | 'AUTO_RELEASED'; // Status of funds
     isBulkOrder?: boolean; // B2B flag
     liabilityReleaseSigned?: boolean; // Phase 5: Shipping shield
+    requiresMultiSig?: boolean; // If true, needs Admin approval
 }
 
 // Smart Cart Types
@@ -292,6 +293,7 @@ export interface CheckoutResult {
         requestedQuantity: number;
         resolutionSuggestion?: SmartSuggestion; // The AI swap suggestion
     };
+    reason?: string; // Failure reason
 }
 
 // Bounty Marketplace Types
@@ -489,8 +491,8 @@ export interface DesignChallenge {
     thumbnailUrl: string;
 }
 
-// Enterprise Types
-export type EnterpriseRole = 'ADMIN' | 'MANAGER' | 'ACCOUNTANT' | 'DESIGNER';
+// Enterprise Types (Updated Phase 9)
+export type EnterpriseRole = 'ADMIN' | 'MANAGER' | 'ACCOUNTANT' | 'DESIGNER' | 'PROCUREMENT' | 'TECHNICAL' | 'AUDITOR';
 
 export interface EnterpriseMember {
     id: string;
@@ -509,6 +511,44 @@ export interface EnterpriseProfile {
     creditLine: number;
     negotiatedCommission: number; // 0.05 to 0.08
     tier: 'GOLD' | 'PLATINUM';
+    // Phase 9.1 KYB
+    verificationStatus: 'UNVERIFIED' | 'PENDING' | 'VERIFIED';
+    kybDocs?: { type: string; url: string; verified: boolean }[];
+    // Phase 9.1 Multi-Sig
+    multiSigEnabled: boolean;
+    requiredSignatures: number;
+}
+
+// RFQ Types (Phase 9.3)
+export interface BlindBid {
+    id: string;
+    supplierName: string; // Hidden until award if needed, or visible
+    amount: number;
+    deliveryDate: number;
+    isSealed: boolean; // True = amount hidden
+}
+
+export interface RFQ {
+    id: string;
+    title: string;
+    items: { sku: string; quantity: number }[];
+    status: 'OPEN' | 'CLOSED' | 'AWARDED';
+    createdAt: number;
+    deadline: number;
+    bids: BlindBid[];
+    awardedBidId?: string;
+}
+
+// B2B Contracts (Phase 9.4)
+export interface B2BContract {
+    id: string;
+    rfqId: string;
+    supplier: string;
+    buyer: string;
+    totalValue: number;
+    terms: 'NET30' | 'NET60' | 'IMMEDIATE';
+    dynamicFeeRate: number; // Tiered Commission
+    status: 'ACTIVE' | 'COMPLETED';
 }
 
 // Oracle Types
