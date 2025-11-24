@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { aiAdapter } from '../services/ai/AIAdapter';
 import { ChatMessage, ViewState } from '../types';
@@ -46,6 +47,11 @@ CORE PROTOCOL FEATURES:
 7. **DeFi Gateway**:
    - Integrated DEX (Decentralized Exchange) for swapping Pi <-> ARTX.
    - Includes an Oracle-verified rate calculator.
+   
+8. **Vendor Portal**:
+   - Businesses can apply to become Verified Vendors.
+   - **Requirement**: Must upload valid **Liability Insurance**.
+   - Benefits: Reduced fees, Verified Badge, access to enterprise bounties.
 
 BEHAVIORAL RULES:
 - If the user is in a specific view (provided in context), tailor advice to that view.
@@ -60,7 +66,8 @@ const SUGGESTIONS: Record<string, string[]> = {
     [ViewState.LEGAL]: ["Is this legally binding?", "How does notarization work?", "Explain IP Transfer"],
     [ViewState.PROFILE]: ["How to verify build?", "Get Developer API Key", "Where are my designs?"],
     [ViewState.DEFI]: ["Swap rate for ARTX?", "Is the Oracle secure?", "Liquidity Pool details"],
-    [ViewState.DASHBOARD]: ["What is Architex?", "Explain Tokenomics", "How to earn ARTX?"]
+    [ViewState.DASHBOARD]: ["What is Architex?", "Explain Tokenomics", "How to earn ARTX?"],
+    [ViewState.VENDOR_PORTAL]: ["Insurance requirements?", "Vendor benefits?", "Approval time?"]
 };
 
 export const ArchieBot: React.FC<ArchieBotProps> = ({ currentView = ViewState.DASHBOARD }) => {

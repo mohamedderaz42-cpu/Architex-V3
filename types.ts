@@ -17,7 +17,8 @@ export enum ViewState {
   BOUNTIES = 'BOUNTIES',
   NFT_FACTORY = 'NFT_FACTORY',
   STAKING = 'STAKING',
-  LEGAL = 'LEGAL'
+  LEGAL = 'LEGAL',
+  VENDOR_PORTAL = 'VENDOR_PORTAL'
 }
 
 export enum NetworkType {
@@ -140,6 +141,22 @@ export interface NFTMetadata {
   mintTime: number;
   owner: string;
   royalty: number; // Percentage
+}
+
+// Vendor Portal Types
+export type VendorStatus = 'NOT_APPLIED' | 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface VendorApplication {
+    companyName: string;
+    taxId: string;
+    contactEmail: string;
+    status: VendorStatus;
+    insuranceDoc?: {
+        fileName: string;
+        uploadedAt: number;
+        verified: boolean;
+    };
+    submittedAt?: number;
 }
 
 // Bounty Marketplace Types

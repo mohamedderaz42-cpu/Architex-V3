@@ -1,5 +1,6 @@
 
-import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier } from "../types";
+
+import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
 import { visionAdapter } from "./vision/VisionAdapter";
 
@@ -17,6 +18,14 @@ const CURRENT_USER_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d
 // Mock User State (Mutable for Demo)
 let mockUserBalance = 0;
 let mockUserTier: UserTier = 'FREE';
+
+// Mock Vendor State
+let mockVendorProfile: VendorApplication = {
+    companyName: '',
+    taxId: '',
+    contactEmail: '',
+    status: 'NOT_APPLIED'
+};
 
 // In-memory store for session (Mock DB)
 let mockDesigns: DesignAsset[] = [
@@ -222,6 +231,35 @@ export const dalSubmitInstallationProof = async (designId: string, imageBase64: 
         return { success: false, reason: verification.comment || "AI could not verify physical installation." };
     }
 };
+
+// --- Vendor Portal Methods ---
+
+export const dalGetVendorProfile = async (): Promise<VendorApplication> => {
+    // Return a clone to prevent reference issues in mock
+    return { ...mockVendorProfile };
+};
+
+export const dalSubmitVendorApplication = async (data: Partial<VendorApplication>, file?: { name: string, data: string }): Promise<VendorApplication> => {
+    await new Promise(resolve => setTimeout(resolve, 1200));
+
+    mockVendorProfile = {
+        ...mockVendorProfile,
+        ...data,
+        status: 'PENDING',
+        submittedAt: Date.now()
+    };
+
+    if (file) {
+        mockVendorProfile.insuranceDoc = {
+            fileName: file.name,
+            uploadedAt: Date.now(),
+            verified: false // Requires admin review
+        };
+    }
+
+    return { ...mockVendorProfile };
+};
+
 
 // --- Messaging Methods ---
 
