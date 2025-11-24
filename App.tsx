@@ -1,21 +1,6 @@
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import React, { useState, useEffect } from 'react';
-import { ViewState, UserSession } from './types';
+import { ViewState, UserSession, SystemMode } from './types';
 import { Dashboard } from './features/Dashboard';
 import { Whitepaper } from './features/Whitepaper';
 import { Scanner } from './features/Scanner';
@@ -23,27 +8,28 @@ import { BlueprintStore } from './features/BlueprintStore';
 import { Gallery } from './features/Gallery';
 import { UserProfile } from './features/UserProfile';
 import { AdminPanel } from './features/AdminPanel';
-import { Messages } from './features/Messages'; // Import Messages
-import { DeFiDashboard } from './features/DeFiDashboard'; // Import DeFi
-import { BountyMarketplace } from './features/BountyMarketplace'; // Import Bounty
-import { NFTFactory } from './features/NFTFactory'; // Import NFT Factory
-import { StakingVault } from './features/StakingVault'; // Import Staking
-import { LegalEngine } from './features/LegalEngine'; // Import Legal Engine
-import { VendorPortal } from './features/VendorPortal'; // Import Vendor Portal
-import { InventoryLedger } from './features/InventoryLedger'; // Import Inventory
-import { ShippingZones } from './features/ShippingZones'; // Import Shipping
-import { SmartCart } from './features/SmartCart'; // Import Smart Cart
-import { ServiceNetwork } from './features/ServiceNetwork'; // Import Service Network
-import { DisputeConsole } from './features/DisputeConsole'; // Import Dispute Console
-import { GovernanceDAO } from './features/GovernanceDAO'; // Import DAO
-import { DesignChallenges } from './features/DesignChallenges'; // Import Challenges
-import { EnterprisePortal } from './features/EnterprisePortal'; // Import Enterprise Portal
-import { CarbonCalculator } from './features/CarbonCalculator'; // Import Calculator
+import { Messages } from './features/Messages';
+import { DeFiDashboard } from './features/DeFiDashboard';
+import { BountyMarketplace } from './features/BountyMarketplace';
+import { NFTFactory } from './features/NFTFactory';
+import { StakingVault } from './features/StakingVault';
+import { LegalEngine } from './features/LegalEngine';
+import { VendorPortal } from './features/VendorPortal';
+import { InventoryLedger } from './features/InventoryLedger';
+import { ShippingZones } from './features/ShippingZones';
+import { SmartCart } from './features/SmartCart';
+import { ServiceNetwork } from './features/ServiceNetwork';
+import { DisputeConsole } from './features/DisputeConsole';
+import { GovernanceDAO } from './features/GovernanceDAO';
+import { DesignChallenges } from './features/DesignChallenges';
+import { EnterprisePortal } from './features/EnterprisePortal';
+import { CarbonCalculator } from './features/CarbonCalculator';
 import { GlassCard } from './components/GlassCard';
 import { ArchieBot } from './components/ArchieBot';
 import { initializeSession, handleAddTrustline } from './services/orchestrator';
-import { adsService } from './services/adsService'; // Import Ads Service
-import { dalGetCart } from './services/dataAccessLayer'; // Import Cart Access for Badge
+import { adsService } from './services/adsService';
+import { dalGetCart } from './services/dataAccessLayer';
+import { systemConfigService } from './services/adminService'; // Import for mode check
 import { UI_CONSTANTS } from './constants';
 
 const App: React.FC = () => {
@@ -52,14 +38,16 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeContextId, setActiveContextId] = useState<string | null>(null);
   const [cartCount, setCartCount] = useState(0);
+  
+  // Phase 11: Beta Gate Logic
+  const [appMode, setAppMode] = useState<SystemMode>('BETA'); // Default to blocked until fetch
+  const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
     init();
-    // Initialize Ads SDK on mount
     adsService.init();
   }, []);
 
-  // Poll for cart updates (Mock approach, normally would use context/subscription)
   useEffect(() => {
     const updateCartCount = async () => {
         const items = await dalGetCart();
@@ -75,6 +63,22 @@ const App: React.FC = () => {
     setLoading(true);
     const userSession = await initializeSession();
     setSession(userSession);
+    
+    // Check App Mode
+    const mode = await systemConfigService.getSystemMode();
+    setAppMode(mode);
+
+    // Beta Gate Check
+    if (mode === 'BETA') {
+        if (!userSession.isAuthenticated || !userSession.isWhitelisted) {
+            setAccessDenied(true);
+        } else {
+            setAccessDenied(false);
+        }
+    } else {
+        setAccessDenied(false);
+    }
+
     setLoading(false);
   };
 
@@ -97,11 +101,9 @@ const App: React.FC = () => {
   };
 
   const handleNavigation = (target: ViewState) => {
-      // Ad Integration: Show ad when navigating to Blueprint Store if user is Free Tier
       if (target === ViewState.BLUEPRINTS) {
           adsService.showAd(session, "interstitial");
       }
-      
       setView(target);
       if (target !== ViewState.MESSAGES) setActiveContextId(null);
   };
@@ -117,15 +119,69 @@ const App: React.FC = () => {
     </button>
   );
 
+  // ADMIN OVERRIDE: If user clicks "Admin Access" in Beta screen
+  const forceAdminLogin = () => {
+      setAccessDenied(false);
+      setView(ViewState.ADMIN_LOGIN);
+  };
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-neon-cyan animate-pulse">Initializing Protocol...</div>;
+
+  // BETA GATE SCREEN
+  if (accessDenied && view !== ViewState.ADMIN_LOGIN) {
+      return (
+          <div className="min-h-screen flex items-center justify-center bg-black relative overflow-hidden">
+              {/* Background Visuals */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-purple-900/20 to-blue-900/20"></div>
+              <div className="absolute inset-0 grid grid-cols-[repeat(20,1fr)] opacity-10">
+                  {Array.from({length: 400}).map((_,i) => <div key={i} className="border border-white/5"></div>)}
+              </div>
+
+              <GlassCard className="max-w-lg w-full p-10 text-center border-neon-purple/50 relative z-10 shadow-[0_0_100px_rgba(124,58,237,0.2)]">
+                  <div className="w-20 h-20 mx-auto mb-6 bg-neon-purple/10 rounded-full flex items-center justify-center border border-neon-purple shadow-lg shadow-neon-purple/50">
+                      <span className="text-4xl">🔒</span>
+                  </div>
+                  <h1 className="text-4xl font-display font-bold text-white mb-2">Closed Beta</h1>
+                  <div className="h-1 w-20 bg-neon-purple mx-auto mb-6"></div>
+                  <p className="text-gray-300 mb-8 leading-relaxed">
+                      Architex is currently conducting final security audits and stress tests. Access is restricted to whitelisted wallet addresses only.
+                  </p>
+                  <div className="bg-black/40 p-4 rounded-lg border border-white/10 mb-8">
+                      <p className="text-xs text-gray-500 uppercase mb-1">Your Identity</p>
+                      <p className="text-neon-cyan font-mono text-sm">{session?.username}</p>
+                      <p className="text-red-400 text-xs mt-2 font-bold">NOT WHITELISTED</p>
+                  </div>
+                  
+                  <div className="flex flex-col gap-3">
+                      <button className="w-full py-3 border border-white/20 rounded text-gray-400 hover:text-white hover:border-white/40 transition-all">
+                          Check Back Later
+                      </button>
+                      <button onClick={forceAdminLogin} className="text-xs text-gray-600 hover:text-gray-400 mt-4">
+                          Administrator Login
+                      </button>
+                  </div>
+              </GlassCard>
+          </div>
+      );
+  }
+
   return (
-    <div className="min-h-screen font-sans text-white p-4 pb-24 md:p-8 max-w-7xl mx-auto">
+    <div className="min-h-screen font-sans text-white p-4 pb-24 md:p-8 max-w-7xl mx-auto relative">
+      {/* App Mode Indicator */}
+      {appMode !== 'LIVE' && (
+          <div className={`fixed top-0 left-0 right-0 h-1 z-50 ${appMode === 'BETA' ? 'bg-neon-purple' : 'bg-yellow-500'}`}></div>
+      )}
+
       {/* Header / Navbar */}
       <header className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView(ViewState.DASHBOARD)}>
           <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/20">
             <span className="font-display font-bold text-xl">A</span>
           </div>
-          <span className="font-display font-bold text-2xl tracking-wide">ARCHITEX</span>
+          <div className="flex flex-col">
+              <span className="font-display font-bold text-2xl tracking-wide">ARCHITEX</span>
+              {appMode !== 'LIVE' && <span className="text-[10px] font-mono text-neon-purple tracking-widest uppercase">{appMode} ENVIRONMENT</span>}
+          </div>
         </div>
 
         <nav className="flex gap-2 bg-white/5 p-1 rounded-xl backdrop-blur-md border border-white/10 flex-wrap justify-center">
@@ -135,12 +191,10 @@ const App: React.FC = () => {
           <NavItem label="Bounties" target={ViewState.BOUNTIES} />
           <NavItem label="Store" target={ViewState.BLUEPRINTS} />
           
-          {/* Vendor Group */}
           <div className="w-px h-6 bg-white/20 mx-1 self-center hidden md:block"></div>
           <NavItem label="Stock" target={ViewState.INVENTORY} />
           <NavItem label="Calculator" target={ViewState.CALCULATOR} />
           
-          {/* Cart Icon */}
           <button 
             onClick={() => handleNavigation(ViewState.CART)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors relative ${
@@ -162,11 +216,8 @@ const App: React.FC = () => {
           <NavItem label="Challenges" target={ViewState.CHALLENGES} /> 
         </nav>
 
-        {/* User Status */}
         <div className="flex items-center gap-3">
-             {loading ? (
-                 <div className="h-2 w-20 bg-white/10 animate-pulse rounded"></div>
-             ) : session?.isAuthenticated ? (
+             {session?.isAuthenticated ? (
                  <button 
                     onClick={() => setView(ViewState.PROFILE)}
                     className={`flex items-center gap-2 px-3 py-1 rounded-full border transition-all ${view === ViewState.PROFILE ? 'bg-neon-cyan/20 border-neon-cyan' : 'bg-green-500/10 border-green-500/30 hover:bg-green-500/20'}`}
@@ -208,9 +259,12 @@ const App: React.FC = () => {
         {view === ViewState.ENTERPRISE_PORTAL && <EnterprisePortal />}
         {view === ViewState.CALCULATOR && <CarbonCalculator />}
         
-        {/* Admin Views */}
         {(view === ViewState.ADMIN_LOGIN || view === ViewState.ADMIN_PANEL) && (
-            <AdminPanel onLogout={() => setView(ViewState.DASHBOARD)} />
+            <AdminPanel onLogout={() => {
+                setAccessDenied(true); // Force back to gate on logout if blocked
+                setView(ViewState.DASHBOARD);
+                init(); // Re-init to check permissions
+            }} />
         )}
         
         {view === ViewState.WALLET && (
@@ -265,13 +319,13 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* AI Companion - Now Context Aware */}
+      {/* AI Companion */}
       <ArchieBot currentView={view} />
 
       {/* Footer */}
       <footer className="mt-20 border-t border-white/5 pt-8 text-center text-gray-500 text-xs">
         <p>© 2024 Architex Protocol. Built on Pi Network.</p>
-        <p className="mt-2 font-mono">v1.0.0-alpha | Pi Testnet</p>
+        <p className="mt-2 font-mono">v1.0.0-beta | Pi Testnet</p>
         <div className="mt-4">
             <button 
                 onClick={() => setView(ViewState.ADMIN_LOGIN)}

@@ -27,13 +27,15 @@ export enum ViewState {
   GOVERNANCE = 'GOVERNANCE',
   CHALLENGES = 'CHALLENGES',
   ENTERPRISE_PORTAL = 'ENTERPRISE_PORTAL',
-  CALCULATOR = 'CALCULATOR' // New
+  CALCULATOR = 'CALCULATOR'
 }
 
 export enum NetworkType {
   TESTNET = 'TESTNET',
   MAINNET = 'MAINNET'
 }
+
+export type SystemMode = 'DEV' | 'BETA' | 'LIVE' | 'MAINTENANCE';
 
 export interface TokenomicsConfig {
   tokenId: string;
@@ -80,8 +82,9 @@ export interface UserSession {
   tier: UserTier;
   role?: 'USER' | 'PROVIDER' | 'ARBITRATOR';
   trustProfile?: TrustProfile;
-  votingPower?: number; // Calculated: Staked + (TrustScore * Multiplier)
-  enterpriseId?: string; // Link to enterprise profile
+  votingPower?: number;
+  enterpriseId?: string;
+  isWhitelisted?: boolean; // For Beta Access
 }
 
 export interface ChatMessage {
@@ -199,8 +202,8 @@ export interface InventoryItem {
     location: string;
     lowStockThreshold: number;
     lastUpdated: number;
-    sustainabilityTags?: string[]; // New: Eco tags
-    co2PerUnit?: number; // New: kg CO2 per unit
+    sustainabilityTags?: string[]; 
+    co2PerUnit?: number;
 }
 
 export interface LedgerEntry {
@@ -254,7 +257,7 @@ export interface SmartSuggestion {
     message: string;
     savingsAmount: number; // In Pi
     savingsPercent: number;
-    co2Reduction?: number; // Kg CO2 saved
+    co2Reduction?: number;
 }
 
 export interface CheckoutResult {
@@ -288,8 +291,8 @@ export interface Bounty {
   status: BountyStatus;
   deadline: number;
   tags: string[];
-  type?: 'DESIGN' | 'SERVICE'; // New: Differentiate between design work and physical services
-  disputeId?: string; // Link to active dispute
+  type?: 'DESIGN' | 'SERVICE'; 
+  disputeId?: string; 
 }
 
 export interface ContractPayout {
@@ -300,8 +303,7 @@ export interface ContractPayout {
   discountApplied?: boolean;
 }
 
-// Service & Arbitration Types (New)
-
+// Service & Arbitration Types
 export interface Certification {
     name: string;
     issuer: string;
@@ -399,13 +401,13 @@ export interface Vote {
     timestamp: number;
 }
 
-// Design Challenges (New)
+// Design Challenges
 export interface DesignChallenge {
     id: string;
     title: string;
     description: string;
     rewardARTX: number; 
-    sponsorDAO: string; // e.g., "Sustainability Guild"
+    sponsorDAO: string; 
     deadline: number;
     participants: number;
     status: 'ACTIVE' | 'VOTING' | 'CLOSED';
@@ -413,7 +415,7 @@ export interface DesignChallenge {
     thumbnailUrl: string;
 }
 
-// Enterprise Types (New)
+// Enterprise Types
 export type EnterpriseRole = 'ADMIN' | 'MANAGER' | 'ACCOUNTANT' | 'DESIGNER';
 
 export interface EnterpriseMember {
@@ -431,18 +433,18 @@ export interface EnterpriseProfile {
     mainWallet: string;
     members: EnterpriseMember[];
     creditLine: number;
-    negotiatedCommission: number; // 0.05 to 0.08 (5-8%)
+    negotiatedCommission: number; // 0.05 to 0.08
     tier: 'GOLD' | 'PLATINUM';
 }
 
 // Oracle Types
 export interface OracleQuote {
-  pair: string; // e.g., 'ARTX/Pi'
+  pair: string; 
   rate: number;
   timestamp: number;
   source: 'DEX_AGGREGATOR' | 'RESERVE_BANK' | 'MARKET_MAKER';
   confidenceScore: number; // 0.0 - 1.0
-  signature?: string; // Simulating cryptographic proof
+  signature?: string; 
 }
 
 // Legal Engine Types
@@ -492,7 +494,7 @@ export interface BotConfig {
   maintenanceIntervalMs: number;
   minTreasuryBalance: number;
   autoRebalance: boolean;
-  b2bCommissionRate: number; // 0.05 - 0.08
+  b2bCommissionRate: number; 
 }
 
 // Security & Fuzzing
@@ -502,7 +504,7 @@ export interface FuzzTestResult {
   targetContract: 'STAKING' | 'BOUNTY' | 'NFT' | 'ORACLE';
   functionName: string;
   inputVector: string;
-  status: 'PASS' | 'FAIL' | 'VULNERABILITY'; // PASS = handled correctly (even if error thrown), FAIL = crash/unexpected, VULN = exploit success
+  status: 'PASS' | 'FAIL' | 'VULNERABILITY'; 
   details: string;
   latencyMs: number;
 }
@@ -514,6 +516,28 @@ export interface SecurityAuditReport {
   vulnerabilitiesFound: number;
   coverage: number; // Percentage
   logs: FuzzTestResult[];
+}
+
+// Stress Test Types (New)
+export interface StressMetrics {
+    activeUsers: number;
+    transactionsPerSecond: number;
+    avgLatencyMs: number;
+    errorRate: number; // Percent
+    cpuUsage: number; // Mock server CPU
+    memoryUsage: number; // Mock server Memory
+}
+
+// External Audit Types (New)
+export interface AuditReport {
+    id: string;
+    firmName: string;
+    auditDate: number;
+    scope: string;
+    status: 'IN_PROGRESS' | 'PASSED' | 'PASSED_WITH_WARNINGS' | 'FAILED';
+    reportHash: string; // IPFS Hash
+    criticalIssuesFound: number;
+    resolvedIssues: number;
 }
 
 // DeFi Types
