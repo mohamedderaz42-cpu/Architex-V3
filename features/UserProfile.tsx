@@ -12,7 +12,7 @@ interface UserProfileProps {
 
 export const UserProfile: React.FC<UserProfileProps> = ({ session }) => {
   const [portfolio, setPortfolio] = useState<DesignAsset[]>([]);
-  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [subscribingTier, setSubscribingTier] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDesigns = async () => {
@@ -22,27 +22,27 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session }) => {
     fetchDesigns();
   }, []);
 
-  const handleSubscribe = async () => {
-    setIsSubscribing(true);
+  const handleSubscribe = async (tierName: string, cost: number) => {
+    setSubscribingTier(tierName);
     try {
         await piService.createTreasuryPayment(
-            "Architex Pro Subscription (1 Month)",
-            PAYMENT_CONFIG.subscriptionCost,
+            `Architex ${tierName} Subscription (1 Month)`,
+            cost,
             {
                 onReadyForServerApproval: async (pid) => console.log("Sub intent approved", pid),
                 onReadyForServerCompletion: async (pid, txid) => {
-                    alert("Welcome to Pro! Subscription Fee routed to Treasury.");
-                    setIsSubscribing(false);
+                    alert(`Welcome to ${tierName}! Subscription Fee routed to Treasury.`);
+                    setSubscribingTier(null);
                 },
-                onCancel: () => setIsSubscribing(false),
+                onCancel: () => setSubscribingTier(null),
                 onError: (e) => {
                     alert("Subscription failed.");
-                    setIsSubscribing(false);
+                    setSubscribingTier(null);
                 }
             }
         );
     } catch (e) {
-        setIsSubscribing(false);
+        setSubscribingTier(null);
     }
   };
 
@@ -87,12 +87,21 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session }) => {
 
             <div className="mt-4 flex gap-4 justify-center md:justify-start">
                  <button 
-                    onClick={handleSubscribe}
-                    disabled={isSubscribing}
+                    onClick={() => handleSubscribe('Pro', PAYMENT_CONFIG.subscriptionCost)}
+                    disabled={!!subscribingTier}
                     className="px-4 py-2 bg-gradient-to-r from-yellow-600 to-yellow-500 text-white text-xs font-bold rounded-lg shadow-lg hover:shadow-yellow-500/20 transition-all flex items-center gap-2 disabled:opacity-50"
                  >
-                    {isSubscribing ? 'Processing...' : `Upgrade to Pro (${PAYMENT_CONFIG.subscriptionCost} Pi)`}
+                    {subscribingTier === 'Pro' ? 'Processing...' : `Upgrade to Pro (${PAYMENT_CONFIG.subscriptionCost} Pi)`}
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                 </button>
+
+                 <button 
+                    onClick={() => handleSubscribe('Accelerator', PAYMENT_CONFIG.acceleratorCost)}
+                    disabled={!!subscribingTier}
+                    className="px-4 py-2 bg-gradient-to-r from-neon-purple to-pink-600 text-white text-xs font-bold rounded-lg shadow-lg hover:shadow-neon-pink/20 transition-all flex items-center gap-2 disabled:opacity-50"
+                 >
+                    {subscribingTier === 'Accelerator' ? 'Processing...' : `Accelerator Tier (${PAYMENT_CONFIG.acceleratorCost} Pi)`}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
                  </button>
             </div>
           </div>

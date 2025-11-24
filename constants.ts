@@ -104,6 +104,7 @@ export const STAKING_CONFIG = {
 export const PAYMENT_CONFIG = {
   downloadCost: 0.50, // Pi
   subscriptionCost: 10.00, // Pi per month
+  acceleratorCost: 52.00, // Pi per month (Accelerator Tier)
   // HARDCODED TREASURY WALLET FOR SERVICE FEES
   treasuryWallet: 'ARCHITEX_MULTISIG_TREASURY_G...VERIFIED',
   memo: 'Architex Service Fee'
