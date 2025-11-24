@@ -48,6 +48,56 @@ class OracleService {
     this.cache.set(pair, quote);
     return quote;
   }
+
+  /**
+   * EXTERNAL API ENDPOINT (Simulated)
+   * This is the data product sold to developers.
+   * Returns a comprehensive market snapshot suitable for external consumption.
+   */
+  async getMarketDataAPI(apiKey: string): Promise<any> {
+    // Simulate Authentication & Rate Limiting Check
+    await new Promise(resolve => setTimeout(resolve, 600));
+
+    if (!apiKey.startsWith('sk_live_')) {
+        throw new Error("Invalid or Missing API Key");
+    }
+
+    // Aggregate data for the API Response
+    const artxPi = await this.getQuote('ARTX/Pi');
+    // Simulate another pair for the index
+    const artxUsdc = {
+        rate: artxPi.rate * 45.0, // Mock conversion
+        source: 'AGGREGATED'
+    };
+
+    return {
+        status: 'success',
+        timestamp: new Date().toISOString(),
+        provider: 'Architex Price Index v1',
+        license: 'Enterprise/Developer',
+        indices: [
+            {
+                symbol: 'ARTX/Pi',
+                price: artxPi.rate,
+                volume_24h: 1250400,
+                confidence: artxPi.confidenceScore,
+                source: artxPi.source,
+                signature: artxPi.signature
+            },
+            {
+                symbol: 'ARTX/USDC',
+                price: artxUsdc.rate,
+                source: artxUsdc.source,
+                derived: true
+            }
+        ],
+        meta: {
+            request_id: `req_${Math.random().toString(36).substr(2, 9)}`,
+            quota_remaining: 9998,
+            server_time_ms: 12
+        }
+    };
+  }
 }
 
 export const oracleService = new OracleService();
