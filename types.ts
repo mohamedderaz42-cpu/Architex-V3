@@ -3,7 +3,8 @@ export enum ViewState {
   DASHBOARD = 'DASHBOARD',
   WALLET = 'WALLET',
   WHITEPAPER = 'WHITEPAPER',
-  SETTINGS = 'SETTINGS'
+  SETTINGS = 'SETTINGS',
+  SCANNER = 'SCANNER'
 }
 
 export enum NetworkType {
@@ -48,5 +49,9 @@ export interface AppConfig {
     vestingVault: string;
     centralBank: string;
     amm: string;
+  };
+  piNetwork: {
+    appId: string;
+    backendUrl: string;
   };
 }

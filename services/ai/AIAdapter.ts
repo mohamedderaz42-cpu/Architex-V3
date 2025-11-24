@@ -1,14 +1,14 @@
-import config from '../../ai_provider_config.json';
+import { AI_CONFIG } from '../../ai_provider_config';
 import { GeminiProvider } from './GeminiProvider';
-import { IAIProvider, AIInput, AIOutput } from './types';
+import { IAIProvider, AIInput, AIOutput, AIProviderConfig } from './types';
 
 class AIAdapter {
   private provider: IAIProvider;
   
   constructor() {
-    const activeProviderId = config.activeProvider;
-    // @ts-ignore - JSON import typing
-    const providerConfig = config.providers[activeProviderId];
+    const activeProviderId = AI_CONFIG.activeProvider;
+    // Cast to ensure we access the specific provider config safely
+    const providerConfig = AI_CONFIG.providers[activeProviderId as keyof typeof AI_CONFIG.providers];
 
     if (!providerConfig) {
       throw new Error(`AI Provider configuration for ${activeProviderId} not found.`);
@@ -16,7 +16,8 @@ class AIAdapter {
 
     switch (activeProviderId) {
       case 'GEMINI':
-        this.provider = new GeminiProvider(providerConfig);
+        // We cast to AIProviderConfig to match the expected interface, as the static object is compatible
+        this.provider = new GeminiProvider(providerConfig as AIProviderConfig);
         break;
       // Future: case 'OPENAI': ...
       default:
