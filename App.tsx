@@ -4,6 +4,8 @@
 
 
 
+
+
 import React, { useState, useEffect } from 'react';
 import { ViewState, UserSession } from './types';
 import { Dashboard } from './features/Dashboard';
@@ -23,6 +25,8 @@ import { VendorPortal } from './features/VendorPortal'; // Import Vendor Portal
 import { InventoryLedger } from './features/InventoryLedger'; // Import Inventory
 import { ShippingZones } from './features/ShippingZones'; // Import Shipping
 import { SmartCart } from './features/SmartCart'; // Import Smart Cart
+import { ServiceNetwork } from './features/ServiceNetwork'; // Import Service Network
+import { DisputeConsole } from './features/DisputeConsole'; // Import Dispute Console
 import { GlassCard } from './components/GlassCard';
 import { ArchieBot } from './components/ArchieBot';
 import { initializeSession, handleAddTrustline } from './services/orchestrator';
@@ -118,7 +122,7 @@ const App: React.FC = () => {
           <NavItem label="Staking" target={ViewState.STAKING} />
           <NavItem label="Bounties" target={ViewState.BOUNTIES} />
           <NavItem label="Store" target={ViewState.BLUEPRINTS} />
-          <NavItem label="Scan" target={ViewState.SCANNER} />
+          <NavItem label="Services" target={ViewState.SERVICES} /> {/* New */}
           
           {/* Vendor Group */}
           <div className="w-px h-6 bg-white/20 mx-1 self-center hidden md:block"></div>
@@ -141,7 +145,7 @@ const App: React.FC = () => {
           </button>
           
           <div className="w-px h-6 bg-white/20 mx-1 self-center hidden md:block"></div>
-          <NavItem label="Legal" target={ViewState.LEGAL} />
+          <NavItem label="Disputes" target={ViewState.DISPUTES} /> {/* New */}
         </nav>
 
         {/* User Status */}
@@ -183,6 +187,8 @@ const App: React.FC = () => {
         {view === ViewState.INVENTORY && <InventoryLedger />}
         {view === ViewState.SHIPPING && <ShippingZones />}
         {view === ViewState.CART && <SmartCart />}
+        {view === ViewState.SERVICES && <ServiceNetwork />}
+        {view === ViewState.DISPUTES && <DisputeConsole />}
         
         {/* Admin Views */}
         {(view === ViewState.ADMIN_LOGIN || view === ViewState.ADMIN_PANEL) && (

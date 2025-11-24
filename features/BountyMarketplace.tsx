@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { GlassCard } from '../components/GlassCard';
 import { bountySmartContract } from '../services/bountySmartContract';
@@ -96,6 +97,20 @@ export const BountyMarketplace: React.FC = () => {
       alert(`Contract Execution Error: ${e.message}`);
     } finally {
       setProcessingId(null);
+    }
+  };
+
+  const handleDispute = async (bounty: Bounty) => {
+    if (!confirm("Are you sure you want to escalate this to the Dispute Resolution Center? Funds will be frozen.")) return;
+    setProcessingId(bounty.id);
+    try {
+        await bountySmartContract.initiateDispute(bounty.id, CURRENT_USER, "Quality of work did not meet specifications.");
+        alert("Dispute Raised. Check the Dispute Console for updates.");
+        loadContractState();
+    } catch (e: any) {
+        alert(e.message);
+    } finally {
+        setProcessingId(null);
     }
   };
 
@@ -227,6 +242,7 @@ export const BountyMarketplace: React.FC = () => {
                     <span className={`text-[10px] px-2 py-0.5 rounded border flex items-center gap-1 ${
                       bounty.status === BountyStatus.OPEN ? 'bg-green-500/20 text-green-400 border-green-500/30' :
                       bounty.status === BountyStatus.COMPLETED ? 'bg-gray-500/20 text-gray-400 border-gray-500/30' :
+                      bounty.status === BountyStatus.DISPUTED ? 'bg-red-500/20 text-red-400 border-red-500/30' :
                       'bg-orange-500/20 text-orange-400 border-orange-500/30'
                     }`}>
                       {bounty.status === BountyStatus.OPEN && <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>}
@@ -272,13 +288,28 @@ export const BountyMarketplace: React.FC = () => {
                   )}
 
                   {bounty.status === BountyStatus.SUBMITTED && (bounty.client === CURRENT_USER || bounty.client === 'MuskFan_99') && (
-                    <button 
-                      onClick={() => handleApprove(bounty)}
-                      disabled={!!processingId}
-                      className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white border border-green-500/50 rounded-lg text-sm font-bold transition-all w-full shadow-lg shadow-green-500/20"
-                    >
-                       {processingId === bounty.id ? 'Verifying...' : 'Approve & Release'}
-                    </button>
+                    <div className="flex flex-col gap-2 w-full">
+                        <button 
+                            onClick={() => handleApprove(bounty)}
+                            disabled={!!processingId}
+                            className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white border border-green-500/50 rounded-lg text-sm font-bold transition-all shadow-lg shadow-green-500/20"
+                        >
+                            {processingId === bounty.id ? 'Verifying...' : 'Approve & Release'}
+                        </button>
+                        <button 
+                            onClick={() => handleDispute(bounty)}
+                            disabled={!!processingId}
+                            className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-bold transition-all"
+                        >
+                            Report / Dispute
+                        </button>
+                    </div>
+                  )}
+
+                  {bounty.status === BountyStatus.DISPUTED && (
+                      <div className="text-center w-full bg-red-500/10 border border-red-500/20 p-2 rounded text-xs text-red-300">
+                          Case under arbitration
+                      </div>
                   )}
                </div>
             </GlassCard>

@@ -1,6 +1,8 @@
-import { Bounty, BountyStatus, ContractPayout } from "../types";
+
+import { Bounty, BountyStatus, ContractPayout, Dispute } from "../types";
 import { CONTRACT_CONFIG } from "../constants";
 import { stakingService } from "./stakingService";
+import { dalCreateDispute, dalGetDisputeById, dalUpdateDispute } from "./dataAccessLayer";
 
 // --- SECURE VAULT STORAGE (Simulated On-Chain State) ---
 // This acts as the "Smart Contract" storage slot on the blockchain.
@@ -222,5 +224,74 @@ export const bountySmartContract = {
       timestamp: Date.now(),
       discountApplied: isStaker
     };
+  },
+
+  /**
+   * DISPUTE LOGIC
+   */
+  initiateDispute: async (bountyId: string, initiator: string, reason: string): Promise<Dispute> => {
+      await new Promise(r => setTimeout(r, 1000));
+      
+      const idx = bountyLedger.findIndex(b => b.id === bountyId);
+      const vaultRecord = secureVault.get(bountyId);
+
+      if (idx === -1 || !vaultRecord) throw new Error("Contract not found");
+      if (vaultRecord.state !== 'LOCKED') throw new Error("Funds not available for dispute");
+
+      // 1. Freeze Funds
+      vaultRecord.state = 'DISPUTED';
+      secureVault.set(bountyId, vaultRecord);
+
+      // 2. Update Ledger
+      bountyLedger[idx].status = BountyStatus.DISPUTED;
+
+      // 3. Create Dispute Record
+      const respondent = bountyLedger[idx].client === initiator ? bountyLedger[idx].designer! : bountyLedger[idx].client;
+      const dispute = await dalCreateDispute(bountyId, initiator, respondent, reason);
+
+      // Link
+      bountyLedger[idx].disputeId = dispute.id;
+
+      return dispute;
+  },
+
+  resolveDispute: async (disputeId: string, winner: string, splitPercentage: number): Promise<void> => {
+      await new Promise(r => setTimeout(r, 1500));
+
+      const dispute = await dalGetDisputeById(disputeId);
+      if (!dispute) throw new Error("Dispute not found");
+
+      const bountyId = dispute.bountyId;
+      const vaultRecord = secureVault.get(bountyId);
+      if (!vaultRecord || vaultRecord.state !== 'DISPUTED') throw new Error("Vault not in disputed state");
+
+      const totalLocked = vaultRecord.lockedBalance;
+      const winnerAmount = totalLocked * (splitPercentage / 100);
+      const loserAmount = totalLocked - winnerAmount;
+
+      // Update Vault
+      vaultRecord.state = 'RELEASED'; // Or Refunded part
+      vaultRecord.lockedBalance = 0;
+      secureVault.set(bountyId, vaultRecord);
+
+      // Update Dispute
+      dispute.status = 'RESOLVED';
+      dispute.ruling = {
+          winner,
+          splitPercentage,
+          reason: 'Arbitrator Decision Executed via Smart Contract',
+          timestamp: Date.now()
+      };
+      await dalUpdateDispute(dispute);
+
+      // Update Bounty
+      const bIdx = bountyLedger.findIndex(b => b.id === bountyId);
+      if (bIdx > -1) {
+          bountyLedger[bIdx].status = BountyStatus.COMPLETED;
+      }
+
+      console.log(`[Smart Contract] DISPUTE RESOLVED: ${disputeId}`);
+      console.log(`[Smart Contract] Winner (${winner}): ${winnerAmount} Pi`);
+      console.log(`[Smart Contract] Remainder: ${loserAmount} Pi`);
   }
 };

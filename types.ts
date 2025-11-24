@@ -21,7 +21,9 @@ export enum ViewState {
   VENDOR_PORTAL = 'VENDOR_PORTAL',
   INVENTORY = 'INVENTORY',
   SHIPPING = 'SHIPPING',
-  CART = 'CART'
+  CART = 'CART',
+  SERVICES = 'SERVICES', // New: Service Provider Network
+  DISPUTES = 'DISPUTES'  // New: Dispute Resolution Center
 }
 
 export enum NetworkType {
@@ -61,6 +63,7 @@ export interface UserSession {
   avatarUrl: string;
   stats: UserStats;
   tier: UserTier;
+  role?: 'USER' | 'PROVIDER' | 'ARBITRATOR'; // New: Role based access
 }
 
 export interface ChatMessage {
@@ -245,7 +248,7 @@ export enum BountyStatus {
   ASSIGNED = 'ASSIGNED',   // Designer selected
   SUBMITTED = 'SUBMITTED', // Work uploaded for review
   COMPLETED = 'COMPLETED', // Approved, Funds Released
-  DISPUTED = 'DISPUTED'
+  DISPUTED = 'DISPUTED'    // New: Dispute Raised
 }
 
 export interface Bounty {
@@ -254,10 +257,12 @@ export interface Bounty {
   description: string;
   price: number; // In Pi
   client: string; // Username
-  designer: string | null; // Username
+  designer: string | null; // Username (or Service Provider)
   status: BountyStatus;
   deadline: number;
   tags: string[];
+  type?: 'DESIGN' | 'SERVICE'; // New: Differentiate between design work and physical services
+  disputeId?: string; // Link to active dispute
 }
 
 export interface ContractPayout {
@@ -266,6 +271,61 @@ export interface ContractPayout {
   designerAmount: number;
   timestamp: number;
   discountApplied?: boolean;
+}
+
+// Service & Arbitration Types (New)
+
+export interface Certification {
+    name: string;
+    issuer: string;
+    date: number;
+    verified: boolean;
+}
+
+export interface ServiceProviderProfile {
+    id: string;
+    username: string;
+    role: 'CONTRACTOR' | 'TECHNICIAN' | 'ARCHITECT';
+    displayName: string;
+    avatarUrl: string;
+    reputationScore: number; // 0-100 unforgeable rating
+    verifiedId: boolean;
+    certifications: Certification[];
+    hourlyRate: number;
+    location: string;
+    available: boolean;
+}
+
+export interface ArbitratorProfile {
+    id: string;
+    username: string;
+    displayName: string;
+    specialty: 'CONSTRUCTION' | 'IP_RIGHTS' | 'FINANCIAL';
+    casesSolved: number;
+    reputationScore: number; // High reputation required
+    feePerCase: number;
+}
+
+export interface Dispute {
+    id: string;
+    bountyId: string;
+    initiator: string;
+    respondent: string;
+    reason: string;
+    status: 'OPEN' | 'ARBITRATION' | 'RESOLVED';
+    arbitratorId: string | null;
+    evidence: {
+        submittedBy: string;
+        text: string;
+        timestamp: number;
+    }[];
+    ruling?: {
+        winner: string;
+        splitPercentage: number; // e.g., 100 to winner, 0 to loser, or 50/50
+        reason: string;
+        timestamp: number;
+    };
+    createdAt: number;
 }
 
 // Staking Types

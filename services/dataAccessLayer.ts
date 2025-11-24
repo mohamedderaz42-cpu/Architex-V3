@@ -1,7 +1,9 @@
 
 
 
-import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult, Order, OrderStatus } from "../types";
+
+
+import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult, Order, OrderStatus, ServiceProviderProfile, ArbitratorProfile, Dispute, Bounty, BountyStatus } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
 import { visionAdapter } from "./vision/VisionAdapter";
 
@@ -178,6 +180,88 @@ let mockMessages: ContextualMessage[] = [
     }
 ];
 
+// --- SERVICE NETWORK MOCK DATA ---
+const mockServiceProviders: ServiceProviderProfile[] = [
+    {
+        id: 'prov_1',
+        username: 'FixItFelix',
+        displayName: 'Felix Construction',
+        role: 'CONTRACTOR',
+        avatarUrl: 'https://ui-avatars.com/api/?name=FC&background=22c55e&color=fff',
+        reputationScore: 98,
+        verifiedId: true,
+        certifications: [
+            { name: 'Licensed General Contractor', issuer: 'State Board', date: Date.now() - 31536000000, verified: true },
+            { name: 'OSHA Safety Cert', issuer: 'OSHA', date: Date.now() - 15000000000, verified: true }
+        ],
+        hourlyRate: 85,
+        location: 'California, USA',
+        available: true
+    },
+    {
+        id: 'prov_2',
+        username: 'TechWiz_Pi',
+        displayName: 'TechWiz Solar Install',
+        role: 'TECHNICIAN',
+        avatarUrl: 'https://ui-avatars.com/api/?name=TW&background=0ea5e9&color=fff',
+        reputationScore: 92,
+        verifiedId: true,
+        certifications: [
+            { name: 'PV Installation Pro', issuer: 'SolarEnergy Int.', date: Date.now() - 20000000000, verified: true }
+        ],
+        hourlyRate: 60,
+        location: 'Nevada, USA',
+        available: true
+    }
+];
+
+const mockArbitrators: ArbitratorProfile[] = [
+    {
+        id: 'arb_1',
+        username: 'JusticeBot_V1',
+        displayName: 'Hon. Justice Unit',
+        specialty: 'CONSTRUCTION',
+        casesSolved: 142,
+        reputationScore: 99,
+        feePerCase: 50
+    },
+    {
+        id: 'arb_2',
+        username: 'LegalEagle_Pi',
+        displayName: 'Sarah Law',
+        specialty: 'IP_RIGHTS',
+        casesSolved: 89,
+        reputationScore: 95,
+        feePerCase: 75
+    },
+    {
+        id: 'arb_3',
+        username: 'CodeArbiter',
+        displayName: 'Dev Dispute Solver',
+        specialty: 'FINANCIAL',
+        casesSolved: 210,
+        reputationScore: 97,
+        feePerCase: 40
+    }
+];
+
+let mockDisputes: Dispute[] = [
+    {
+        id: 'disp_alpha_001',
+        bountyId: 'bounty_mock_service_01',
+        initiator: 'PiUser_Alpha',
+        respondent: 'FixItFelix',
+        reason: 'Work not completed according to blueprint specifications.',
+        status: 'OPEN',
+        arbitratorId: null,
+        evidence: [
+            { submittedBy: 'PiUser_Alpha', text: 'Uploaded photo showing incorrect wiring.', timestamp: Date.now() - 100000 }
+        ],
+        createdAt: Date.now() - 200000
+    }
+];
+
+
 export const dalGetAccountInfo = async (): Promise<UserSession> => {
   await new Promise(resolve => setTimeout(resolve, 800));
   return {
@@ -192,7 +276,8 @@ export const dalGetAccountInfo = async (): Promise<UserSession> => {
         likesReceived: 345,
         volumeTraded: 15.5
     },
-    tier: mockUserTier
+    tier: mockUserTier,
+    role: 'USER'
   };
 };
 
@@ -666,4 +751,45 @@ export const dalInitializeConversation = async (design: DesignAsset): Promise<st
     });
 
     return design.id;
+};
+
+// --- Service & Dispute Methods ---
+
+export const dalGetServiceProviders = async (): Promise<ServiceProviderProfile[]> => {
+    return [...mockServiceProviders];
+};
+
+export const dalGetArbitrators = async (): Promise<ArbitratorProfile[]> => {
+    return [...mockArbitrators];
+};
+
+export const dalGetDisputes = async (username: string): Promise<Dispute[]> => {
+    return mockDisputes.filter(d => d.initiator === username || d.respondent === username);
+};
+
+export const dalGetDisputeById = async (id: string): Promise<Dispute | null> => {
+    return mockDisputes.find(d => d.id === id) || null;
+};
+
+export const dalCreateDispute = async (bountyId: string, initiator: string, respondent: string, reason: string): Promise<Dispute> => {
+    const dispute: Dispute = {
+        id: `disp_${Date.now()}`,
+        bountyId,
+        initiator,
+        respondent,
+        reason,
+        status: 'OPEN',
+        arbitratorId: null,
+        evidence: [],
+        createdAt: Date.now()
+    };
+    mockDisputes.push(dispute);
+    return dispute;
+};
+
+export const dalUpdateDispute = async (dispute: Dispute): Promise<void> => {
+    const idx = mockDisputes.findIndex(d => d.id === dispute.id);
+    if (idx > -1) {
+        mockDisputes[idx] = dispute;
+    }
 };
