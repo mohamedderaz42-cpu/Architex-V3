@@ -1,4 +1,5 @@
 
+
 // ... (Keep all existing imports)
 import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier, VendorApplication, InventoryItem, LedgerEntry, ShippingZone, CartItem, SmartSuggestion, CheckoutResult, Order, OrderStatus, ServiceProviderProfile, ArbitratorProfile, Dispute, Bounty, BountyStatus, TrustProfile, DesignChallenge, EnterpriseProfile, EnterpriseMember, ServiceRequest, ServiceCategory, ServiceBid } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
@@ -7,7 +8,8 @@ import { trustScoreService } from "./trustScoreService";
 import { stakingService } from "./stakingService";
 import { systemConfigService } from "./adminService"; 
 import { offlineService } from "./offlineService"; 
-import { nftContractService } from "./nftContractService"; 
+import { nftContractService } from "./nftContractService";
+import { erpSyncService } from "./erpSyncService"; // NEW Import
 
 // ... (Keep constants PI_HEADERS, DEFAULT_AVATAR, CURRENT_USER_AVATAR)
 const PI_HEADERS = {
@@ -20,7 +22,7 @@ const PI_HEADERS = {
 const DEFAULT_AVATAR = "https://ui-avatars.com/api/?name=Pi+User&background=7928ca&color=fff";
 const CURRENT_USER_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150";
 
-// ... (Keep Mock States: mockUserBalance, mockEnterprise, mockVendorProfile)
+// ... (Keep Mock States)
 let mockUserBalance = 0;
 let mockUserTier: UserTier = 'FREE';
 
@@ -39,11 +41,17 @@ let mockEnterprise: EnterpriseProfile = {
     ]
 };
 
+// Updated Vendor Profile with ERP fields
 let mockVendorProfile: VendorApplication = {
-    companyName: '',
-    taxId: '',
-    contactEmail: '',
-    status: 'NOT_APPLIED'
+    companyName: 'EcoBuild Supply Co.',
+    taxId: 'US-99-1020',
+    contactEmail: 'supply@ecobuild.com',
+    status: 'APPROVED',
+    waiverSigned: true,
+    waiverSignature: 'John Doe',
+    inventorySyncEnabled: false,
+    erpApiKey: '',
+    webhookUrl: ''
 };
 
 // ... (Keep mockInventory, mockCart, mockLedger, mockShippingZones, mockOrders, mockDesigns, mockGallery, mockChallenges, mockConversations, mockMessages, mockServiceProviders, mockArbitrators, mockDisputes)
@@ -303,6 +311,8 @@ let mockDisputes: Dispute[] = [
 
 let activeServiceRequests: ServiceRequest[] = [];
 
+// ... (Keep DAL methods: dalGetAccountInfo, dalSignTerms, dalUpgradeTier, dalCreateTrustline, dalGetLiveTokenStats, dalGenerateBlueprint, dalGetUserDesigns, dalGetPublicGallery, dalUnlockDesign, dalSubmitInstallationProof, dalGetVendorProfile)
+
 export const dalGetAccountInfo = async (): Promise<UserSession> => {
   return offlineService.wrapFetch('account_info', async () => {
       await new Promise(resolve => setTimeout(resolve, 800));
@@ -431,17 +441,25 @@ export const dalSubmitInstallationProof = async (designId: string, imageBase64: 
     }
 };
 
-// ... (Keep Vendor, Inventory, Cart, Messaging methods as is)
+// Vendor & ERP
 export const dalGetVendorProfile = async (): Promise<VendorApplication> => { return { ...mockVendorProfile }; };
+
 export const dalSubmitVendorApplication = async (data: Partial<VendorApplication>, file?: { name: string, data: string }): Promise<VendorApplication> => {
     await new Promise(resolve => setTimeout(resolve, 1200));
     mockVendorProfile = { ...mockVendorProfile, ...data, status: 'PENDING', submittedAt: Date.now() };
     if (file) { mockVendorProfile.insuranceDoc = { fileName: file.name, uploadedAt: Date.now(), verified: false }; }
     return { ...mockVendorProfile };
 };
+
+export const dalUpdateVendorSettings = async (settings: Partial<VendorApplication>): Promise<VendorApplication> => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    mockVendorProfile = { ...mockVendorProfile, ...settings };
+    return { ...mockVendorProfile };
+};
+
+// ... (Keep rest of DAL until dalCheckout)
 export const dalGetVendorOrders = async (): Promise<Order[]> => { return [...mockOrders].sort((a, b) => b.timestamp - a.timestamp); };
 
-// Phase 5.3: Check Auto-Release
 export const dalCheckAutoRelease = async (): Promise<void> => {
     const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
     const now = Date.now();
@@ -502,17 +520,28 @@ export const dalConfirmReceipt = async (orderId: string): Promise<Order | null> 
 
 export const dalGetInventory = async (): Promise<InventoryItem[]> => { return [...mockInventory]; };
 export const dalGetLedger = async (): Promise<LedgerEntry[]> => { return [...mockLedger].sort((a, b) => b.timestamp - a.timestamp); };
-export const dalAdjustStock = async (itemId: string, quantityDelta: number, reason: string): Promise<boolean> => {
-    const idx = mockInventory.findIndex(i => i.id === itemId);
+
+// Updated dalAdjustStock to handle lookup by SKU if ID fails (for ERP bridge convenience)
+export const dalAdjustStock = async (identifier: string, quantityDelta: number, reason: string): Promise<boolean> => {
+    // Try by ID first, then SKU
+    let idx = mockInventory.findIndex(i => i.id === identifier);
+    if (idx === -1) {
+        idx = mockInventory.findIndex(i => i.sku === identifier);
+    }
+    
     if (idx === -1) return false;
     const item = mockInventory[idx];
     const newQuantity = item.quantity + quantityDelta;
+    
+    // Allow negative updates for inventory corrections, but generally don't go below 0 for physical
     if (newQuantity < 0) return false; 
+    
     mockInventory[idx] = { ...item, quantity: newQuantity, lastUpdated: Date.now() };
-    const entry: LedgerEntry = { id: `led_${Date.now()}`, itemId, itemName: item.name, type: quantityDelta > 0 ? 'INBOUND' : 'OUTBOUND', quantity: Math.abs(quantityDelta), timestamp: Date.now(), reason, performedBy: 'PiUser_Alpha' };
+    const entry: LedgerEntry = { id: `led_${Date.now()}`, itemId: item.id, itemName: item.name, type: quantityDelta > 0 ? 'INBOUND' : 'OUTBOUND', quantity: Math.abs(quantityDelta), timestamp: Date.now(), reason, performedBy: 'System/ERP' };
     mockLedger.unshift(entry);
     return true;
 };
+
 export const dalGetShippingZones = async (): Promise<ShippingZone[]> => { return [...mockShippingZones]; };
 export const dalUpdateShippingZone = async (zone: ShippingZone): Promise<boolean> => {
     const idx = mockShippingZones.findIndex(z => z.id === zone.id);
@@ -569,11 +598,18 @@ export const dalApplySuggestion = async (suggestion: SmartSuggestion): Promise<v
         }
     } else if (suggestion.type === 'BUNDLE') { await dalAddToCart(suggestion.suggestedItem, 1); }
 };
+
+/**
+ * CHECKOUT (Phase 5.6 - Enhanced Conflict Resolution)
+ */
 export const dalCheckout = async (liabilitySigned: boolean = true): Promise<CheckoutResult> => {
     await new Promise(r => setTimeout(r, 1500));
+    
+    // 1. Stock Check & Reservation
     for (const cartItem of mockCart) {
         const stockItem = mockInventory.find(i => i.id === cartItem.id);
         if (!stockItem || stockItem.quantity < cartItem.cartQuantity) {
+            // ... (Existing conflict logic)
             const alternative = mockInventory.find(i => i.category === stockItem?.category && i.id !== stockItem?.id && i.quantity >= cartItem.cartQuantity);
             let suggestion: SmartSuggestion | undefined;
             if (alternative) {
@@ -583,18 +619,32 @@ export const dalCheckout = async (liabilitySigned: boolean = true): Promise<Chec
             return { success: false, conflict: { conflictingItemId: cartItem.id, itemName: cartItem.name, availableQuantity: stockItem ? stockItem.quantity : 0, requestedQuantity: cartItem.cartQuantity, resolutionSuggestion: suggestion } };
         }
     }
+
+    // 2. Inventory Conflict Resolution Logic
+    // Simulate a race condition where ERP updated stock at same millisecond
+    const raceCondition = Math.random() > 0.95; // 5% simulated chance
+    
+    let orderStatus: OrderStatus = 'PENDING';
+    
+    if (raceCondition) {
+        console.warn("[SmartCart] ⚠️ Inventory Conflict Detected (Simulated Race Condition)");
+        orderStatus = 'PENDING_VERIFICATION';
+    }
+
+    // Deduct Stock
     mockInventory = mockInventory.map(inv => {
         const inCart = mockCart.find(c => c.id === inv.id);
         if (inCart) { return { ...inv, quantity: inv.quantity - inCart.cartQuantity }; }
         return inv;
     });
+
     const newOrder: Order = { 
         id: `ORD-${Date.now().toString().substr(-6).toUpperCase()}`, 
         customerId: 'PiUser_Alpha', 
         customerName: 'Current User', 
         items: [...mockCart], 
         total: mockCart.reduce((sum, item) => sum + (item.unitPrice * item.cartQuantity), 0), 
-        status: 'PENDING', 
+        status: orderStatus, 
         timestamp: Date.now(), 
         shippingAddress: '123 Main St, Pi Network City, 00000', 
         payoutStatus: 'ESCROWED', 
@@ -602,8 +652,27 @@ export const dalCheckout = async (liabilitySigned: boolean = true): Promise<Chec
     };
     mockOrders.unshift(newOrder);
     mockCart = [];
-    return { success: true, orderId: newOrder.id };
+
+    // 3. Trigger Outbound Webhook to ERP
+    if (mockVendorProfile.webhookUrl) {
+        erpSyncService.notifySale(mockVendorProfile.webhookUrl, newOrder);
+    }
+
+    // 4. Auto-resolve Pending Verification after delay (Simulation of blockchain finality)
+    if (orderStatus === 'PENDING_VERIFICATION') {
+        setTimeout(() => {
+            const idx = mockOrders.findIndex(o => o.id === newOrder.id);
+            if (idx > -1) {
+                mockOrders[idx].status = 'PENDING';
+                console.log(`[SmartCart] Conflict Resolved for ${newOrder.id}. Order Confirmed.`);
+            }
+        }, 5000);
+    }
+
+    return { success: true, orderId: newOrder.id, status: orderStatus };
 };
+
+// ... (Keep rest of file: Conversations, Disputes, Enterprise, ArchitexGo)
 export const dalGetConversations = async (): Promise<Conversation[]> => { return [...mockConversations].sort((a, b) => b.lastTimestamp - a.lastTimestamp); };
 export const dalGetMessages = async (contextId: string): Promise<ContextualMessage[]> => { return mockMessages.filter(m => m.contextId === contextId).sort((a, b) => a.timestamp - b.timestamp); };
 export const dalSendMessage = async (contextId: string, text: string): Promise<ContextualMessage> => {

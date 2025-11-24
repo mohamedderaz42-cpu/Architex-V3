@@ -195,6 +195,19 @@ export interface VendorApplication {
     // Phase 5: Immunity Protocol
     waiverSigned?: boolean;
     waiverSignature?: string;
+    // Phase 5.3: ERP Integration
+    erpApiKey?: string;
+    webhookUrl?: string;
+    inventorySyncEnabled?: boolean;
+}
+
+export interface ERPLog {
+    id: string;
+    timestamp: number;
+    type: 'INBOUND_SYNC' | 'OUTBOUND_WEBHOOK' | 'ERROR';
+    details: string;
+    status: 'SUCCESS' | 'FAILED';
+    latency: number;
 }
 
 // Inventory & Logistics Types
@@ -235,7 +248,7 @@ export interface ShippingZone {
 }
 
 // Order Management Types
-export type OrderStatus = 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED';
+export type OrderStatus = 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'PENDING_VERIFICATION';
 
 export interface Order {
     id: string;
@@ -271,6 +284,7 @@ export interface SmartSuggestion {
 export interface CheckoutResult {
     success: boolean;
     orderId?: string;
+    status?: OrderStatus;
     conflict?: {
         conflictingItemId: string;
         itemName: string;

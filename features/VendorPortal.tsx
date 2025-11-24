@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { GlassCard } from '../components/GlassCard';
-import { dalGetVendorProfile, dalSubmitVendorApplication, dalGetVendorOrders, dalUpdateOrderStatus } from '../services/dataAccessLayer';
+import { dalGetVendorProfile, dalSubmitVendorApplication, dalGetVendorOrders, dalUpdateOrderStatus, dalUpdateVendorSettings } from '../services/dataAccessLayer';
+import { erpSyncService } from '../services/erpSyncService';
 import { legalService } from '../services/legalService';
-import { VendorApplication, Order } from '../types';
+import { VendorApplication, Order, ERPLog } from '../types';
 
 export const VendorPortal: React.FC = () => {
     const [vendor, setVendor] = useState<VendorApplication | null>(null);
@@ -12,7 +13,7 @@ export const VendorPortal: React.FC = () => {
 
     // Dashboard State
     const [orders, setOrders] = useState<Order[]>([]);
-    const [activeTab, setActiveTab] = useState<'ORDERS' | 'SETTINGS'>('ORDERS');
+    const [activeTab, setActiveTab] = useState<'ORDERS' | 'ERP' | 'SETTINGS'>('ORDERS');
     const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
 
     // Form State
@@ -25,6 +26,11 @@ export const VendorPortal: React.FC = () => {
     const [waiverSignature, setWaiverSignature] = useState('');
     const [hasReadWaiver, setHasReadWaiver] = useState(false);
 
+    // ERP State
+    const [erpLogs, setErpLogs] = useState<ERPLog[]>([]);
+    const [webhookUrl, setWebhookUrl] = useState('');
+    const [isSavingERP, setIsSavingERP] = useState(false);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -34,6 +40,13 @@ export const VendorPortal: React.FC = () => {
     useEffect(() => {
         if (vendor?.status === 'APPROVED') {
             loadOrders();
+            setWebhookUrl(vendor.webhookUrl || '');
+            
+            // Subscribe to ERP Logs
+            const unsub = erpSyncService.subscribe((log) => {
+                setErpLogs(prev => [log, ...prev]);
+            });
+            return () => unsub();
         }
     }, [vendor?.status]);
 
@@ -128,6 +141,37 @@ export const VendorPortal: React.FC = () => {
         await dalUpdateOrderStatus(orderId, 'SHIPPED', tracking);
         await loadOrders();
         setProcessingOrderId(null);
+    };
+
+    // ERP Actions
+    const handleGenerateApiKey = async () => {
+        const key = erpSyncService.generateApiKey();
+        const updated = await dalUpdateVendorSettings({ erpApiKey: key });
+        setVendor(updated);
+        alert("New API Key Generated. Update your external systems immediately.");
+    };
+
+    const handleSaveWebhook = async () => {
+        setIsSavingERP(true);
+        const updated = await dalUpdateVendorSettings({ webhookUrl });
+        setVendor(updated);
+        setIsSavingERP(false);
+        alert("Webhook configuration saved.");
+    };
+
+    const handleSimulateSync = async () => {
+        if (!vendor?.erpApiKey) {
+            alert("Generate API Key first.");
+            return;
+        }
+        try {
+            await erpSyncService.inboundSync(vendor.erpApiKey, [
+                { sku: 'MAT-PLA-001', quantity: 5 }, // Simulating restock
+                { sku: 'KIT-HAB-SML', quantity: -1 }  // Simulating shrinkage
+            ]);
+        } catch (e: any) {
+            alert(e.message);
+        }
     };
 
     if (loading) return <div className="text-center p-10 animate-pulse text-neon-cyan">Loading Vendor Data...</div>;
@@ -388,8 +432,14 @@ export const VendorPortal: React.FC = () => {
                         Orders
                     </button>
                     <button 
+                        onClick={() => setActiveTab('ERP')}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${activeTab === 'ERP' ? 'bg-neon-purple/20 border-neon-purple text-neon-purple' : 'bg-white/5 border-white/10 text-gray-400'}`}
+                    >
+                        ERP & API
+                    </button>
+                    <button 
                         onClick={() => setActiveTab('SETTINGS')}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${activeTab === 'SETTINGS' ? 'bg-neon-purple/20 border-neon-purple text-neon-purple' : 'bg-white/5 border-white/10 text-gray-400'}`}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${activeTab === 'SETTINGS' ? 'bg-white/10 border-white/20 text-white' : 'bg-white/5 border-white/10 text-gray-400'}`}
                     >
                         Store Settings
                     </button>
@@ -417,7 +467,7 @@ export const VendorPortal: React.FC = () => {
                 </GlassCard>
             </div>
 
-            {activeTab === 'ORDERS' ? (
+            {activeTab === 'ORDERS' && (
                 <div className="space-y-4">
                     {orders.length === 0 ? (
                          <div className="p-10 border border-dashed border-white/10 rounded-xl text-center text-gray-500">
@@ -435,9 +485,10 @@ export const VendorPortal: React.FC = () => {
                                                 order.status === 'PENDING' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
                                                 order.status === 'PROCESSING' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
                                                 order.status === 'SHIPPED' ? 'bg-neon-purple/20 text-neon-purple border-neon-purple/30' :
+                                                order.status === 'PENDING_VERIFICATION' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 animate-pulse' :
                                                 'bg-green-500/20 text-green-400 border-green-500/30'
                                             }`}>
-                                                {order.status}
+                                                {order.status === 'PENDING_VERIFICATION' ? 'BLOCKCHAIN VERIFYING' : order.status}
                                             </span>
                                             {/* Payout Status Indicator */}
                                             {(order.payoutStatus === 'RELEASED' || order.payoutStatus === 'AUTO_RELEASED') && (
@@ -514,13 +565,99 @@ export const VendorPortal: React.FC = () => {
                                                 Completed
                                             </div>
                                         )}
+                                        {order.status === 'PENDING_VERIFICATION' && (
+                                            <div className="px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-center text-xs text-yellow-400 font-bold">
+                                                Conflict Check...
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </GlassCard>
                         ))
                     )}
                 </div>
-            ) : (
+            )}
+
+            {activeTab === 'ERP' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Configuration */}
+                    <div className="space-y-6">
+                        <GlassCard title="API Access" className="border-neon-purple/30">
+                            <div className="mb-4">
+                                <label className="text-xs text-gray-500 uppercase font-bold block mb-2">API Key</label>
+                                {vendor.erpApiKey ? (
+                                    <div className="flex gap-2">
+                                        <code className="flex-1 bg-black/40 border border-white/10 rounded p-3 text-neon-purple font-mono text-sm break-all">
+                                            {vendor.erpApiKey}
+                                        </code>
+                                        <button onClick={handleGenerateApiKey} className="px-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-xs text-white">
+                                            Rotate
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button onClick={handleGenerateApiKey} className="w-full py-3 bg-neon-purple text-white font-bold rounded hover:bg-neon-purple/80 transition-all">
+                                        Generate API Key
+                                    </button>
+                                )}
+                                <p className="text-xs text-gray-500 mt-2">Use this key to authenticate Inbound Sync requests.</p>
+                            </div>
+
+                            <div className="mb-4">
+                                <label className="text-xs text-gray-500 uppercase font-bold block mb-2">Webhook URL</label>
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="text" 
+                                        value={webhookUrl}
+                                        onChange={e => setWebhookUrl(e.target.value)}
+                                        className="flex-1 bg-black/40 border border-white/10 rounded p-3 text-white focus:border-neon-purple outline-none"
+                                        placeholder="https://your-erp.com/webhooks/architex"
+                                    />
+                                    <button 
+                                        onClick={handleSaveWebhook}
+                                        disabled={isSavingERP}
+                                        className="px-4 bg-neon-purple/20 text-neon-purple border border-neon-purple/30 rounded font-bold text-sm"
+                                    >
+                                        Save
+                                    </button>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-2">We will POST order JSON payloads here immediately upon checkout.</p>
+                            </div>
+
+                            <div className="p-4 bg-blue-900/10 border border-blue-500/20 rounded">
+                                <h4 className="text-blue-400 font-bold text-sm mb-1">Inventory Bridge Status</h4>
+                                <p className="text-xs text-gray-400">Rate Limit: 60 requests/min per key.</p>
+                                <button onClick={handleSimulateSync} className="mt-2 text-xs text-neon-cyan underline hover:text-white">
+                                    Dev: Simulate Inbound Sync (Test)
+                                </button>
+                            </div>
+                        </GlassCard>
+                    </div>
+
+                    {/* Logs */}
+                    <GlassCard title="Integration Log" className="h-[500px] flex flex-col">
+                        <div className="flex-1 bg-black/50 rounded-lg p-4 overflow-y-auto font-mono text-xs border border-white/5 shadow-inner">
+                            {erpLogs.length === 0 ? (
+                                <div className="text-gray-600 text-center pt-10">No recent API activity.</div>
+                            ) : (
+                                erpLogs.map(log => (
+                                    <div key={log.id} className="mb-3 border-b border-white/5 pb-2 last:border-0">
+                                        <div className="flex justify-between mb-1">
+                                            <span className={`font-bold ${log.status === 'SUCCESS' ? 'text-green-400' : 'text-red-400'}`}>
+                                                [{log.status}] {log.type}
+                                            </span>
+                                            <span className="text-gray-500">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                                        </div>
+                                        <div className="text-gray-300 break-words">{log.details}</div>
+                                        <div className="text-gray-600 mt-1">{log.latency}ms</div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </GlassCard>
+                </div>
+            )}
+
+            {activeTab === 'SETTINGS' && (
                 <GlassCard title="Store Settings">
                     <div className="text-gray-400">Settings panel coming soon...</div>
                 </GlassCard>

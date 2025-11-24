@@ -61,7 +61,11 @@ export const SmartCart: React.FC = () => {
             const result = await dalCheckout(liabilityReleased);
             
             if (result.success) {
-                alert(`Order Successfully Placed! ID: ${result.orderId}`);
+                if (result.status === 'PENDING_VERIFICATION') {
+                    alert(`Order Placed but Pending Verification (ID: ${result.orderId}).\n\nReason: Inventory Conflict Detected.\n\nThe Blockchain Timestamp is arbitrating the final stock allocation. Check your Order History in a few seconds.`);
+                } else {
+                    alert(`Order Successfully Placed! ID: ${result.orderId}`);
+                }
                 loadCart(); // Should be empty
                 setLiabilityReleased(false);
             } else if (result.conflict) {
