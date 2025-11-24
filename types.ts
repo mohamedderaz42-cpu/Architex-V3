@@ -8,7 +8,9 @@ export enum ViewState {
   SCANNER = 'SCANNER',
   BLUEPRINTS = 'BLUEPRINTS',
   GALLERY = 'GALLERY',
-  PROFILE = 'PROFILE'
+  PROFILE = 'PROFILE',
+  ADMIN_LOGIN = 'ADMIN_LOGIN',
+  ADMIN_PANEL = 'ADMIN_PANEL'
 }
 
 export enum NetworkType {
@@ -85,6 +87,24 @@ export interface DesignAsset {
   authorAvatar: string;
   likes: number;
   views: number;
+}
+
+// Admin & Analytics
+export interface AdminSession {
+  isAuthenticated: boolean;
+  token: string;
+}
+
+export interface ApiUsageStats {
+  providerId: string;
+  providerName: string;
+  totalRequests: number;
+  totalTokens: number;
+  errorRate: number; // Percentage 0-100
+  avgLatency: number; // ms
+  costEstimate: number; // USD
+  status: 'ONLINE' | 'DEGRADED' | 'OFFLINE';
+  history: { time: string; requests: number; latency: number }[];
 }
 
 // Global Pi SDK Type Definition

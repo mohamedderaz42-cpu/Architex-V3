@@ -7,6 +7,7 @@ import { Scanner } from './features/Scanner';
 import { BlueprintStore } from './features/BlueprintStore';
 import { Gallery } from './features/Gallery';
 import { UserProfile } from './features/UserProfile';
+import { AdminPanel } from './features/AdminPanel'; // Import AdminPanel
 import { GlassCard } from './components/GlassCard';
 import { ArchieBot } from './components/ArchieBot';
 import { initializeSession, handleAddTrustline } from './services/orchestrator';
@@ -97,6 +98,11 @@ const App: React.FC = () => {
         {view === ViewState.GALLERY && <Gallery />}
         {view === ViewState.PROFILE && session && <UserProfile session={session} />}
         
+        {/* Admin Views */}
+        {(view === ViewState.ADMIN_LOGIN || view === ViewState.ADMIN_PANEL) && (
+            <AdminPanel onLogout={() => setView(ViewState.DASHBOARD)} />
+        )}
+        
         {view === ViewState.WALLET && (
           <div className="max-w-2xl mx-auto space-y-6">
             <GlassCard title="Wallet Asset Management" glow>
@@ -150,6 +156,14 @@ const App: React.FC = () => {
       <footer className="mt-20 border-t border-white/5 pt-8 text-center text-gray-500 text-xs">
         <p>© 2024 Architex Protocol. Built on Pi Network & Stellar Soroban.</p>
         <p className="mt-2 font-mono">v1.0.0-alpha | Testnet</p>
+        <div className="mt-4">
+            <button 
+                onClick={() => setView(ViewState.ADMIN_LOGIN)}
+                className="text-gray-700 hover:text-gray-500 transition-colors text-[10px] uppercase tracking-widest"
+            >
+                Admin Access
+            </button>
+        </div>
       </footer>
     </div>
   );
