@@ -2,17 +2,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GlassCard } from '../components/GlassCard';
 import { adminAuth, getSystemTelemetry } from '../services/adminService';
-import { ApiUsageStats, ViewState, FuzzTestResult } from '../types';
+import { ApiUsageStats, ViewState, FuzzTestResult, BotLog } from '../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, PieChart, Pie, Cell } from 'recharts';
 import { UI_CONSTANTS } from '../constants';
 import { fuzzTestingService } from '../services/fuzzTestingService';
+import { adminBotService } from '../services/adminBotService';
 
 interface AdminPanelProps {
   onLogout: () => void;
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
-  const [step, setStep] = useState<'LOGIN' | 'MFA' | 'DASHBOARD' | 'AUDIT'>('LOGIN');
+  const [step, setStep] = useState<'LOGIN' | 'MFA' | 'DASHBOARD' | 'AUDIT' | 'BOT'>('LOGIN');
   const [password, setPassword] = useState('');
   const [mfaCode, setMfaCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -23,6 +24,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
   const [auditRunning, setAuditRunning] = useState(false);
   const [auditLogs, setAuditLogs] = useState<FuzzTestResult[]>([]);
   const logsEndRef = useRef<HTMLDivElement>(null);
+
+  // Bot State
+  const [botLogs, setBotLogs] = useState<BotLog[]>([]);
+  const [botStatus, setBotStatus] = useState(adminBotService.getStatus());
+  const botLogsEndRef = useRef<HTMLDivElement>(null);
 
   // Telemetry Polling
   useEffect(() => {
@@ -35,6 +41,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
       const interval = setInterval(loadData, 5000); // Live update every 5s
       return () => clearInterval(interval);
     }
+  }, [step]);
+
+  // Bot Polling
+  useEffect(() => {
+      if (step === 'BOT') {
+          const updateBotUI = () => {
+              setBotLogs(adminBotService.getLogs());
+              setBotStatus(adminBotService.getStatus());
+          };
+          updateBotUI();
+          const interval = setInterval(updateBotUI, 1000);
+          return () => clearInterval(interval);
+      }
   }, [step]);
 
   // Auto-scroll logs
@@ -91,6 +110,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
       ]);
 
       setAuditRunning(false);
+  };
+
+  const toggleBot = () => {
+      if (botStatus.isRunning) {
+          adminBotService.stop();
+      } else {
+          adminBotService.start();
+      }
+      setBotStatus(adminBotService.getStatus());
   };
 
   if (step === 'LOGIN') {
@@ -165,6 +193,105 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
         </GlassCard>
       </div>
     );
+  }
+
+  // --- BOT VIEW ---
+  if (step === 'BOT') {
+      return (
+          <div className="space-y-6 animate-[fadeIn_0.5s_ease-out]">
+             <div className="flex justify-between items-center">
+                <div>
+                    <h1 className="text-3xl font-display font-bold text-white">Automated Treasury Bot</h1>
+                    <p className="text-gray-400 text-sm font-mono mt-1">
+                        STATUS: {botStatus.isRunning ? <span className="text-green-400 animate-pulse">ONLINE - EXECUTING</span> : <span className="text-red-400">OFFLINE - STANDBY</span>}
+                    </p>
+                </div>
+                <div className="flex gap-2">
+                    <button onClick={() => setStep('DASHBOARD')} className="px-4 py-2 border border-white/10 rounded hover:bg-white/5 text-gray-300">
+                        Back to Dashboard
+                    </button>
+                    <button 
+                        onClick={toggleBot}
+                        className={`px-6 py-2 font-bold rounded shadow-lg transition-all flex items-center gap-2 ${
+                            botStatus.isRunning 
+                            ? 'bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30' 
+                            : 'bg-green-500/20 text-green-400 border border-green-500/50 hover:bg-green-500/30'
+                        }`}
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        {botStatus.isRunning ? 'Stop Operation' : 'Initialize Bot'}
+                    </button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                 {/* Status Cards */}
+                 <div className="space-y-4">
+                     <GlassCard title="Treasury Monitor" className="border-neon-cyan/30">
+                        <div className="text-2xl font-mono font-bold text-white mb-1">
+                            {botStatus.treasury.toLocaleString()} <span className="text-sm text-gray-500">ARTX</span>
+                        </div>
+                        <div className="text-xs text-green-400 bg-green-500/10 px-2 py-1 rounded inline-block">
+                             ▲ Fees Incoming (Simulated)
+                        </div>
+                     </GlassCard>
+
+                     <GlassCard title="Liquidity Health" className="border-neon-purple/30">
+                        <div className="text-2xl font-mono font-bold text-white mb-1">
+                            {botStatus.liquidity.toLocaleString()} <span className="text-sm text-gray-500">ARTX</span>
+                        </div>
+                        <div className="w-full bg-gray-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                            <div className="bg-neon-purple h-full animate-[pulse_3s_infinite]" style={{ width: '98%' }}></div>
+                        </div>
+                        <div className="text-[10px] text-gray-500 mt-1 text-right">Pool Sync: 98%</div>
+                     </GlassCard>
+
+                     <GlassCard title="Active Directives">
+                        <ul className="text-xs space-y-2 text-gray-400">
+                            <li className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                                Route Service Fees -> MultiSig
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                                Auto-Rebalance AMM Pools
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                                Sweep Dust to Treasury
+                            </li>
+                        </ul>
+                     </GlassCard>
+                 </div>
+
+                 {/* Console Output */}
+                 <div className="lg:col-span-2 bg-black rounded-xl border border-white/20 p-4 font-mono text-xs h-[500px] overflow-hidden flex flex-col shadow-2xl relative">
+                    <div className="absolute top-0 left-0 right-0 bg-white/5 p-2 border-b border-white/10 text-gray-500 flex justify-between">
+                         <span>root@architex-bot:~# tail -f /var/log/treasury.log</span>
+                         <span className="flex gap-1">
+                             <span className="w-3 h-3 rounded-full bg-red-500/20"></span>
+                             <span className="w-3 h-3 rounded-full bg-yellow-500/20"></span>
+                             <span className="w-3 h-3 rounded-full bg-green-500/20"></span>
+                         </span>
+                    </div>
+                    <div className="mt-8 flex-1 overflow-y-auto space-y-1">
+                        {botLogs.length === 0 && <div className="text-gray-600 italic">Waiting for bot initialization...</div>}
+                        {botLogs.map(log => (
+                            <div key={log.id} className="flex gap-2 break-all hover:bg-white/5 px-2 py-0.5 rounded">
+                                <span className="text-gray-600 shrink-0">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                                <span className={`font-bold shrink-0 w-20 ${
+                                    log.status === 'SUCCESS' ? 'text-green-500' :
+                                    log.status === 'WARNING' ? 'text-yellow-500' : 'text-red-500'
+                                }`}>[{log.status}]</span>
+                                <span className="text-neon-cyan shrink-0 w-24">{log.action}:</span>
+                                <span className="text-gray-300">{log.details}</span>
+                            </div>
+                        ))}
+                    </div>
+                 </div>
+            </div>
+          </div>
+      );
   }
 
   if (step === 'AUDIT') {
@@ -264,6 +391,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
             <p className="text-gray-400 text-sm font-mono mt-1">SECURE CONNECTION ESTABLISHED</p>
         </div>
         <div className="flex gap-2">
+            <button 
+                onClick={() => setStep('BOT')}
+                className="px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded hover:bg-green-500/30 transition-colors text-sm font-bold flex items-center gap-2"
+            >
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                Auto-Admin Bot
+            </button>
             <button 
                 onClick={() => setStep('AUDIT')}
                 className="px-4 py-2 bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded hover:bg-orange-500/30 transition-colors text-sm font-bold"

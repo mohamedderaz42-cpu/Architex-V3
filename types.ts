@@ -221,6 +221,21 @@ export interface ApiUsageStats {
   history: { time: string; requests: number; latency: number }[];
 }
 
+// Admin Bot Types
+export interface BotLog {
+  id: string;
+  timestamp: number;
+  action: string;
+  details: string;
+  status: 'SUCCESS' | 'WARNING' | 'ERROR';
+}
+
+export interface BotConfig {
+  maintenanceIntervalMs: number;
+  minTreasuryBalance: number;
+  autoRebalance: boolean;
+}
+
 // Security & Fuzzing
 export interface FuzzTestResult {
   id: string;
