@@ -46,6 +46,8 @@ export interface UserStats {
   volumeTraded: number;
 }
 
+export type UserTier = 'FREE' | 'PRO' | 'ACCELERATOR';
+
 export interface UserSession {
   isAuthenticated: boolean;
   username: string;
@@ -54,6 +56,7 @@ export interface UserSession {
   balance: number;
   avatarUrl: string;
   stats: UserStats;
+  tier: UserTier;
 }
 
 export interface ChatMessage {

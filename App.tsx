@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { ViewState, UserSession } from './types';
 import { Dashboard } from './features/Dashboard';
@@ -17,6 +18,7 @@ import { LegalEngine } from './features/LegalEngine'; // Import Legal Engine
 import { GlassCard } from './components/GlassCard';
 import { ArchieBot } from './components/ArchieBot';
 import { initializeSession, handleAddTrustline } from './services/orchestrator';
+import { adsService } from './services/adsService'; // Import Ads Service
 import { UI_CONSTANTS } from './constants';
 
 const App: React.FC = () => {
@@ -26,13 +28,17 @@ const App: React.FC = () => {
   const [activeContextId, setActiveContextId] = useState<string | null>(null);
 
   useEffect(() => {
-    const init = async () => {
-      const userSession = await initializeSession();
-      setSession(userSession);
-      setLoading(false);
-    };
     init();
+    // Initialize Ads SDK on mount
+    adsService.init();
   }, []);
+
+  const init = async () => {
+    setLoading(true);
+    const userSession = await initializeSession();
+    setSession(userSession);
+    setLoading(false);
+  };
 
   const onAddTrustline = async () => {
     if (!session) return;
@@ -52,12 +58,19 @@ const App: React.FC = () => {
       setView(ViewState.MESSAGES);
   };
 
+  const handleNavigation = (target: ViewState) => {
+      // Ad Integration: Show ad when navigating to Blueprint Store if user is Free Tier
+      if (target === ViewState.BLUEPRINTS) {
+          adsService.showAd(session, "interstitial");
+      }
+      
+      setView(target);
+      if (target !== ViewState.MESSAGES) setActiveContextId(null);
+  };
+
   const NavItem = ({ label, target }: { label: string; target: ViewState }) => (
     <button
-      onClick={() => {
-          setView(target);
-          if (target !== ViewState.MESSAGES) setActiveContextId(null);
-      }}
+      onClick={() => handleNavigation(target)}
       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
         view === target ? 'bg-neon-purple/20 text-neon-cyan border border-neon-purple/50' : 'text-gray-400 hover:text-white'
       }`}
@@ -99,6 +112,9 @@ const App: React.FC = () => {
                  >
                     <img src={session.avatarUrl} alt="Avatar" className="w-6 h-6 rounded-full" />
                     <span className={`text-xs font-mono ${view === ViewState.PROFILE ? 'text-neon-cyan' : 'text-green-400'}`}>{session.username}</span>
+                    {session.tier !== 'FREE' && (
+                        <span className="text-[10px] bg-yellow-500 text-black px-1 rounded font-bold">{session.tier}</span>
+                    )}
                  </button>
              ) : (
                  <button className="text-sm text-neon-cyan">Connect Pi</button>
@@ -110,11 +126,11 @@ const App: React.FC = () => {
       <main className="animate-[fadeIn_0.5s_ease-out]">
         {view === ViewState.DASHBOARD && <Dashboard />}
         {view === ViewState.WHITEPAPER && <Whitepaper />}
-        {view === ViewState.SCANNER && <Scanner onNavigateToBlueprints={() => setView(ViewState.BLUEPRINTS)} />}
+        {view === ViewState.SCANNER && <Scanner onNavigateToBlueprints={() => handleNavigation(ViewState.BLUEPRINTS)} />}
         {view === ViewState.BLUEPRINTS && <BlueprintStore onOpenChat={handleOpenChat} />}
         {view === ViewState.GALLERY && <Gallery />}
         {view === ViewState.MESSAGES && <Messages initialContextId={activeContextId} />}
-        {view === ViewState.PROFILE && session && <UserProfile session={session} />}
+        {view === ViewState.PROFILE && session && <UserProfile session={session} onRefresh={init} />}
         {view === ViewState.DEFI && <DeFiDashboard />}
         {view === ViewState.BOUNTIES && <BountyMarketplace />}
         {view === ViewState.NFT_FACTORY && <NFTFactory />}

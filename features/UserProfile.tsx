@@ -1,16 +1,18 @@
+
 import React, { useEffect, useState, useRef } from 'react';
-import { UserSession, DesignAsset } from '../types';
+import { UserSession, DesignAsset, UserTier } from '../types';
 import { GlassCard } from '../components/GlassCard';
-import { dalGetUserDesigns, dalSubmitInstallationProof } from '../services/dataAccessLayer';
+import { dalGetUserDesigns, dalSubmitInstallationProof, dalUpgradeTier } from '../services/dataAccessLayer';
 import { piService } from '../services/piService';
 import { oracleService } from '../services/oracleService';
 import { UI_CONSTANTS, PAYMENT_CONFIG } from '../constants';
 
 interface UserProfileProps {
   session: UserSession;
+  onRefresh?: () => void;
 }
 
-export const UserProfile: React.FC<UserProfileProps> = ({ session }) => {
+export const UserProfile: React.FC<UserProfileProps> = ({ session, onRefresh }) => {
   const [portfolio, setPortfolio] = useState<DesignAsset[]>([]);
   const [subscribingTier, setSubscribingTier] = useState<string | null>(null);
   
@@ -52,7 +54,14 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session }) => {
                          setHasApiKey(true);
                          alert("API License Activated! Key Generated.");
                     } else {
-                         alert(`Welcome to ${tierName}! Subscription Fee routed to Treasury.`);
+                         // Upgrade User Tier in DAL
+                         const targetTier = tierName === 'Pro' ? 'PRO' : 'ACCELERATOR';
+                         await dalUpgradeTier(targetTier as UserTier);
+                         
+                         alert(`Welcome to ${tierName}! Ads have been removed.`);
+                         
+                         // Refresh Session in App.tsx
+                         if (onRefresh) onRefresh();
                     }
                     setSubscribingTier(null);
                 },
@@ -135,6 +144,12 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session }) => {
             <div className="absolute bottom-0 right-0 w-8 h-8 bg-green-500 rounded-full border-4 border-slate-900 flex items-center justify-center text-white text-[10px]" title="Online">
                 ✓
             </div>
+            {/* Tier Badge */}
+            {session.tier !== 'FREE' && (
+                <div className="absolute -top-2 -right-2 bg-gradient-to-r from-amber-400 to-amber-600 text-black font-bold text-[10px] px-2 py-1 rounded-full shadow-lg border border-white/20">
+                    {session.tier}
+                </div>
+            )}
           </div>
 
           {/* User Info */}
@@ -159,23 +174,32 @@ export const UserProfile: React.FC<UserProfileProps> = ({ session }) => {
             </p>
 
             <div className="mt-4 flex gap-4 justify-center md:justify-start">
-                 <button 
-                    onClick={() => handleSubscribe('Pro', PAYMENT_CONFIG.subscriptionCost)}
-                    disabled={!!subscribingTier}
-                    className="px-4 py-2 bg-gradient-to-r from-yellow-600 to-yellow-500 text-white text-xs font-bold rounded-lg shadow-lg hover:shadow-yellow-500/20 transition-all flex items-center gap-2 disabled:opacity-50"
-                 >
-                    {subscribingTier === 'Pro' ? 'Processing...' : `Upgrade to Pro (${PAYMENT_CONFIG.subscriptionCost} Pi)`}
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                 </button>
+                 {session.tier === 'FREE' ? (
+                     <>
+                        <button 
+                            onClick={() => handleSubscribe('Pro', PAYMENT_CONFIG.subscriptionCost)}
+                            disabled={!!subscribingTier}
+                            className="px-4 py-2 bg-gradient-to-r from-yellow-600 to-yellow-500 text-white text-xs font-bold rounded-lg shadow-lg hover:shadow-yellow-500/20 transition-all flex items-center gap-2 disabled:opacity-50"
+                        >
+                            {subscribingTier === 'Pro' ? 'Processing...' : `Upgrade to Pro (${PAYMENT_CONFIG.subscriptionCost} Pi)`}
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        </button>
 
-                 <button 
-                    onClick={() => handleSubscribe('Accelerator', PAYMENT_CONFIG.acceleratorCost)}
-                    disabled={!!subscribingTier}
-                    className="px-4 py-2 bg-gradient-to-r from-neon-purple to-pink-600 text-white text-xs font-bold rounded-lg shadow-lg hover:shadow-neon-pink/20 transition-all flex items-center gap-2 disabled:opacity-50"
-                 >
-                    {subscribingTier === 'Accelerator' ? 'Processing...' : `Accelerator Tier (${PAYMENT_CONFIG.acceleratorCost} Pi)`}
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                 </button>
+                        <button 
+                            onClick={() => handleSubscribe('Accelerator', PAYMENT_CONFIG.acceleratorCost)}
+                            disabled={!!subscribingTier}
+                            className="px-4 py-2 bg-gradient-to-r from-neon-purple to-pink-600 text-white text-xs font-bold rounded-lg shadow-lg hover:shadow-neon-pink/20 transition-all flex items-center gap-2 disabled:opacity-50"
+                        >
+                            {subscribingTier === 'Accelerator' ? 'Processing...' : `Accelerator Tier (${PAYMENT_CONFIG.acceleratorCost} Pi)`}
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                        </button>
+                     </>
+                 ) : (
+                     <div className="px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-sm font-bold flex items-center gap-2">
+                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                         Active {session.tier} Plan (Ads Free)
+                     </div>
+                 )}
             </div>
           </div>
 

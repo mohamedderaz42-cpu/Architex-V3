@@ -1,4 +1,5 @@
-import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation } from "../types";
+
+import { TokenomicsConfig, UserSession, DesignAsset, ContextualMessage, Conversation, UserTier } from "../types";
 import { TOKENOMICS, CONFIG } from "../constants";
 import { visionAdapter } from "./vision/VisionAdapter";
 
@@ -15,6 +16,7 @@ const CURRENT_USER_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d
 
 // Mock User State (Mutable for Demo)
 let mockUserBalance = 0;
+let mockUserTier: UserTier = 'FREE';
 
 // In-memory store for session (Mock DB)
 let mockDesigns: DesignAsset[] = [
@@ -118,8 +120,14 @@ export const dalGetAccountInfo = async (): Promise<UserSession> => {
         designsCreated: 12,
         likesReceived: 345,
         volumeTraded: 15.5
-    }
+    },
+    tier: mockUserTier
   };
+};
+
+export const dalUpgradeTier = async (newTier: UserTier): Promise<boolean> => {
+    mockUserTier = newTier;
+    return true;
 };
 
 export const dalCreateTrustline = async (tokenId: string): Promise<boolean> => {
