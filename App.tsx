@@ -11,6 +11,7 @@ import { Messages } from './features/Messages'; // Import Messages
 import { DeFiDashboard } from './features/DeFiDashboard'; // Import DeFi
 import { BountyMarketplace } from './features/BountyMarketplace'; // Import Bounty
 import { NFTFactory } from './features/NFTFactory'; // Import NFT Factory
+import { StakingVault } from './features/StakingVault'; // Import Staking
 import { GlassCard } from './components/GlassCard';
 import { ArchieBot } from './components/ArchieBot';
 import { initializeSession, handleAddTrustline } from './services/orchestrator';
@@ -77,12 +78,12 @@ const App: React.FC = () => {
         <nav className="flex gap-2 bg-white/5 p-1 rounded-xl backdrop-blur-md border border-white/10 flex-wrap justify-center">
           <NavItem label="Dashboard" target={ViewState.DASHBOARD} />
           <NavItem label="DeFi" target={ViewState.DEFI} />
-          <NavItem label="NFT Factory" target={ViewState.NFT_FACTORY} />
+          <NavItem label="Staking" target={ViewState.STAKING} />
+          <NavItem label="NFTs" target={ViewState.NFT_FACTORY} />
           <NavItem label="Bounties" target={ViewState.BOUNTIES} />
+          <NavItem label="Store" target={ViewState.BLUEPRINTS} />
           <NavItem label="Scan" target={ViewState.SCANNER} />
-          <NavItem label="Blueprints" target={ViewState.BLUEPRINTS} />
           <NavItem label="Inbox" target={ViewState.MESSAGES} />
-          <NavItem label="Wallet" target={ViewState.WALLET} />
         </nav>
 
         {/* User Status */}
@@ -115,6 +116,7 @@ const App: React.FC = () => {
         {view === ViewState.DEFI && <DeFiDashboard />}
         {view === ViewState.BOUNTIES && <BountyMarketplace />}
         {view === ViewState.NFT_FACTORY && <NFTFactory />}
+        {view === ViewState.STAKING && <StakingVault />}
         
         {/* Admin Views */}
         {(view === ViewState.ADMIN_LOGIN || view === ViewState.ADMIN_PANEL) && (

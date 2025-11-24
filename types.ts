@@ -15,7 +15,8 @@ export enum ViewState {
   MESSAGES = 'MESSAGES',
   DEFI = 'DEFI',
   BOUNTIES = 'BOUNTIES',
-  NFT_FACTORY = 'NFT_FACTORY'
+  NFT_FACTORY = 'NFT_FACTORY',
+  STAKING = 'STAKING'
 }
 
 export enum NetworkType {
@@ -154,6 +155,25 @@ export interface ContractPayout {
   platformFee: number;
   designerAmount: number;
   timestamp: number;
+}
+
+// Staking Types
+export interface StakingPool {
+  id: string;
+  name: string;
+  description: string;
+  apy: number; // Percentage
+  lockPeriodDays: number; // 0 for flexible
+  minStake: number;
+  totalStaked: number; // Global TVL
+}
+
+export interface UserStake {
+  poolId: string;
+  amount: number;
+  startTime: number;
+  lastClaimTime: number;
+  unclaimedRewards: number;
 }
 
 // Admin & Analytics

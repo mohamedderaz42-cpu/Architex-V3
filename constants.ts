@@ -72,6 +72,35 @@ export const NFT_CONFIG = {
   ROYALTY_PERCENTAGE: 5
 };
 
+export const STAKING_CONFIG = {
+  POOLS: [
+    { 
+      id: 'pool_flex', 
+      name: 'Flexible Savings', 
+      description: 'Stake ARTX with no lock-up period. Withdraw anytime.',
+      apy: 5.5, 
+      lockPeriodDays: 0, 
+      minStake: 10 
+    },
+    { 
+      id: 'pool_validator', 
+      name: 'Validator Node Share', 
+      description: 'Support network security. 30-day lock-up.',
+      apy: 12.0, 
+      lockPeriodDays: 30, 
+      minStake: 100 
+    },
+    { 
+      id: 'pool_governance', 
+      name: 'DAO Governance Vault', 
+      description: 'Maximum yield for long-term holders. 90-day lock-up.',
+      apy: 24.5, 
+      lockPeriodDays: 90, 
+      minStake: 500 
+    }
+  ]
+};
+
 export const PAYMENT_CONFIG = {
   downloadCost: 0.50, // Pi
   recipient: 'ARCHITEX_TREASURY_WALLET',
