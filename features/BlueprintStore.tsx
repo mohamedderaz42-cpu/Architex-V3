@@ -1,10 +1,9 @@
-
 import React, { useEffect, useState } from 'react';
 import { GlassCard } from '../components/GlassCard';
 import { dalGetUserDesigns, dalUnlockDesign, dalInitializeConversation } from '../services/dataAccessLayer';
 import { piService } from '../services/piService';
 import { DesignAsset } from '../types';
-import { PAYMENT_CONFIG, UI_CONSTANTS } from '../constants';
+import { ProactiveIntervention } from '../components/ProactiveIntervention';
 
 interface BlueprintStoreProps {
     onOpenChat?: (contextId: string) => void;
@@ -14,6 +13,11 @@ export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) =>
   const [designs, setDesigns] = useState<DesignAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  
+  // Proactive UX State
+  const [modificationCount, setModificationCount] = useState(0);
+  const [showIntervention, setShowIntervention] = useState(false);
+  const [isCustomizing, setIsCustomizing] = useState<string | null>(null);
 
   useEffect(() => {
     loadDesigns();
@@ -28,7 +32,6 @@ export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) =>
 
   const handleUnlock = async (design: DesignAsset) => {
     setProcessingId(design.id);
-    
     try {
       await piService.createPayment(
         `Unlock: ${design.title}`,
@@ -36,11 +39,8 @@ export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) =>
         {
           onReadyForServerApproval: async (paymentId) => {
             console.log("Payment Approved by User, sending to backend...", paymentId);
-            // In a real app, you would POST to your backend here to 'approve' the payment with Pi Servers
           },
           onReadyForServerCompletion: async (paymentId, txid) => {
-             console.log("Blockchain Transaction Confirmed:", txid);
-             // Verify and Unlock
              const unlockedDesign = await dalUnlockDesign(paymentId, design.id);
              if (unlockedDesign) {
                  setDesigns(prev => prev.map(d => d.id === design.id ? unlockedDesign : d));
@@ -48,11 +48,9 @@ export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) =>
              }
           },
           onCancel: (paymentId) => {
-            console.log("Payment Cancelled", paymentId);
             setProcessingId(null);
           },
           onError: (error, payment) => {
-            console.error("Payment Error", error);
             setProcessingId(null);
             alert("Transaction Failed on Pi Blockchain.");
           }
@@ -76,6 +74,39 @@ export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) =>
       const contextId = await dalInitializeConversation(design);
       if (onOpenChat) {
           onOpenChat(contextId);
+      }
+  };
+
+  // --- Proactive UX Logic ---
+  const handleCustomize = (design: DesignAsset) => {
+    // 1. Check Rule
+    if (modificationCount >= 2) {
+        setShowIntervention(true);
+        return;
+    }
+
+    // 2. Simulate Manual Modification
+    setIsCustomizing(design.id);
+    setTimeout(() => {
+        setModificationCount(prev => prev + 1);
+        setIsCustomizing(null);
+        // Toast could go here in a full implementation
+    }, 1500);
+  };
+
+  const handleHireProfessional = () => {
+      setShowIntervention(false);
+      // Reset count to avoid looping immediately if they return
+      setModificationCount(0);
+      
+      // Redirect to support chat (assuming the first unlocked design or a generic context)
+      // In a real scenario, we'd pass the specific design ID causing the friction.
+      const targetDesign = designs.find(d => d.status === 'UNLOCKED');
+      if (targetDesign) {
+          handleContextualChat(targetDesign);
+      } else {
+          // Fallback if no specific design is readily available contextually
+          alert("Redirecting to Professional Services Directory...");
       }
   };
 
@@ -104,20 +135,14 @@ export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) =>
                     className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${design.status === 'LOCKED' ? 'grayscale-[50%] blur-[1px]' : ''}`}
                 />
                 
-                {/* Protocol: Watermark Overlay (If Locked) */}
                 {design.status === 'LOCKED' && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 pointer-events-none select-none z-10">
                          <div className="rotate-[-15deg] border-4 border-white/20 px-4 py-2">
                              <span className="text-3xl font-black text-white/20 uppercase tracking-widest whitespace-nowrap">PREVIEW ONLY</span>
                          </div>
-                         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/diagonal-stripes.png')] opacity-20"></div>
-                         <div className="absolute bottom-2 w-full text-center">
-                             <span className="text-[10px] text-white/40 uppercase tracking-[0.3em]">Property of Architex</span>
-                         </div>
                     </div>
                 )}
                 
-                {/* Format Badge */}
                 <div className="absolute top-2 right-2 px-2 py-1 bg-black/60 backdrop-blur rounded text-xs font-bold text-white border border-white/10">
                     {design.format}
                 </div>
@@ -147,7 +172,7 @@ export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) =>
                                 {processingId === design.id ? (
                                     <>
                                         <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                        <span>Confirming on Chain...</span>
+                                        <span>Confirming...</span>
                                     </>
                                 ) : (
                                     <>
@@ -158,22 +183,36 @@ export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) =>
                             </button>
                         </div>
                     ) : (
-                        <div>
-                             <div className="flex justify-between items-end mb-3">
+                        <div className="space-y-2">
+                             <div className="flex justify-between items-end mb-1">
                                 <span className="text-xs text-green-400">License Acquired</span>
-                                <span className="text-xs text-gray-400">Ready for Export</span>
                             </div>
-                            <button 
-                                onClick={() => handleDownload(design)}
-                                className="w-full py-2 bg-white/10 border border-green-500/30 text-green-400 rounded-lg font-bold text-sm hover:bg-green-500/10 transition-all flex items-center justify-center gap-2"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                Download Source File
-                            </button>
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={() => handleCustomize(design)}
+                                    disabled={isCustomizing === design.id}
+                                    className="flex-1 py-2 bg-white/5 border border-white/20 text-white rounded-lg font-bold text-xs hover:bg-white/10 transition-all flex items-center justify-center gap-1"
+                                >
+                                    {isCustomizing === design.id ? (
+                                        <span className="animate-pulse">Saving...</span>
+                                    ) : (
+                                        <>
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                            Customize
+                                        </>
+                                    )}
+                                </button>
+                                <button 
+                                    onClick={() => handleDownload(design)}
+                                    className="px-3 py-2 bg-green-500/10 border border-green-500/30 text-green-400 rounded-lg font-bold text-xs hover:bg-green-500/20 transition-all"
+                                    title="Download"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                </button>
+                            </div>
                         </div>
                     )}
                     
-                    {/* Contextual Messaging Trigger */}
                     <button 
                         onClick={() => handleContextualChat(design)}
                         className="w-full py-2 bg-transparent border border-white/20 text-gray-300 rounded-lg font-medium text-xs hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
@@ -187,6 +226,13 @@ export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) =>
           ))}
         </div>
       )}
+
+      {/* Proactive Engine Intervention */}
+      <ProactiveIntervention 
+        isOpen={showIntervention}
+        onClose={() => setShowIntervention(false)}
+        onConfirm={handleHireProfessional}
+      />
     </div>
   );
 };
