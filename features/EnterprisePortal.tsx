@@ -3,12 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../components/GlassCard';
 import { dalGetEnterpriseProfile, dalAddEnterpriseUser, dalSubmitBulkOrder, dalGetClientOrders, dalSubmitKYBDocs, dalGetRFQs } from '../services/dataAccessLayer';
 import { adminBotService } from '../services/adminBotService';
-import { EnterpriseProfile, EnterpriseMember, Order, RFQ } from '../types';
+import { zkService } from '../services/zkService'; // Phase 9.5
+import { EnterpriseProfile, EnterpriseMember, Order, RFQ, ZKProof } from '../types';
 
 export const EnterprisePortal: React.FC = () => {
     const [profile, setProfile] = useState<EnterpriseProfile | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'TEAM' | 'PROCUREMENT' | 'VERIFICATION' | 'RFQ'>('DASHBOARD');
+    const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'TEAM' | 'PROCUREMENT' | 'VERIFICATION' | 'RFQ' | 'PRIVACY'>('DASHBOARD');
     const [orders, setOrders] = useState<Order[]>([]);
     const [rfqs, setRfqs] = useState<RFQ[]>([]);
 
@@ -24,6 +25,11 @@ export const EnterprisePortal: React.FC = () => {
 
     // KYB State
     const [kybFile, setKybFile] = useState<File | null>(null);
+
+    // ZK State
+    const [zkThreshold, setZkThreshold] = useState(50000);
+    const [generatingProof, setGeneratingProof] = useState(false);
+    const [activeProof, setActiveProof] = useState<ZKProof | null>(null);
 
     useEffect(() => {
         loadData();
@@ -85,6 +91,19 @@ export const EnterprisePortal: React.FC = () => {
         loadData();
     };
 
+    const handleGenerateSolvencyProof = async () => {
+        setGeneratingProof(true);
+        try {
+            const mockBalance = 150000; // Profile credit line + wallet
+            const proof = await zkService.generateSolvencyProof(profile?.mainWallet || '', mockBalance, zkThreshold);
+            setActiveProof(proof);
+        } catch (e: any) {
+            alert(e.message);
+        } finally {
+            setGeneratingProof(false);
+        }
+    };
+
     if (loading || !profile) return <div className="p-10 text-center animate-pulse">Loading Enterprise Data...</div>;
 
     return (
@@ -101,7 +120,7 @@ export const EnterprisePortal: React.FC = () => {
                     </div>
                 </div>
                 <div className="flex gap-2 flex-wrap">
-                    {['DASHBOARD', 'TEAM', 'PROCUREMENT', 'RFQ', 'VERIFICATION'].map(tab => (
+                    {['DASHBOARD', 'TEAM', 'PROCUREMENT', 'RFQ', 'VERIFICATION', 'PRIVACY'].map(tab => (
                         <button 
                             key={tab}
                             onClick={() => setActiveTab(tab as any)} 
@@ -279,6 +298,68 @@ export const EnterprisePortal: React.FC = () => {
                         </div>
                     )}
                 </GlassCard>
+            )}
+
+            {/* PRIVACY (ZK PROOFS) */}
+            {activeTab === 'PRIVACY' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <GlassCard title="Zero-Knowledge Proof Engine">
+                        <p className="text-sm text-gray-400 mb-4">
+                            Prove financial solvency to suppliers or auditors without revealing your exact wallet balance.
+                        </p>
+                        
+                        <div className="bg-white/5 p-4 rounded-lg border border-white/10 mb-6">
+                            <label className="block text-xs text-gray-500 uppercase font-bold mb-1">Proof Threshold (Pi)</label>
+                            <input 
+                                type="number" 
+                                value={zkThreshold} 
+                                onChange={e => setZkThreshold(parseInt(e.target.value))}
+                                className="w-full bg-black/40 border border-white/10 rounded p-3 text-white font-mono outline-none focus:border-neon-purple"
+                            />
+                            <p className="text-[10px] text-gray-500 mt-2">
+                                Generating proof: "Wallet {profile.mainWallet.substring(0,6)}... has balance &ge; {zkThreshold.toLocaleString()} Pi"
+                            </p>
+                        </div>
+
+                        <button 
+                            onClick={handleGenerateSolvencyProof}
+                            disabled={generatingProof}
+                            className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                            {generatingProof ? (
+                                <>
+                                    <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    Generating zk-SNARK...
+                                </>
+                            ) : (
+                                <span>Generate Solvency Proof</span>
+                            )}
+                        </button>
+                    </GlassCard>
+
+                    <GlassCard title="Proof Output">
+                        {activeProof ? (
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 text-green-400 font-bold">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    Proof Generated Successfully
+                                </div>
+                                <div className="bg-black/50 p-4 rounded border border-white/10 font-mono text-xs text-gray-400 break-all">
+                                    {activeProof.proof}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                    Hash: {activeProof.id} <br/>
+                                    Timestamp: {new Date(activeProof.timestamp).toLocaleString()}
+                                </div>
+                                <button className="text-xs text-neon-cyan underline">Copy to Clipboard</button>
+                            </div>
+                        ) : (
+                            <div className="h-full flex items-center justify-center text-gray-600 text-sm">
+                                No proof generated yet.
+                            </div>
+                        )}
+                    </GlassCard>
+                </div>
             )}
         </div>
     );

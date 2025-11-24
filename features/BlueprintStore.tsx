@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { GlassCard } from '../components/GlassCard';
 import { dalGetUserDesigns, dalUnlockDesign, dalInitializeConversation } from '../services/dataAccessLayer';
 import { piService } from '../services/piService';
+import { iotService } from '../services/iotService'; // Phase 1.6
 import { DesignAsset } from '../types';
 import { ProactiveIntervention } from '../components/ProactiveIntervention';
 import { ARViewer } from './ARViewer';
@@ -95,6 +96,10 @@ export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) =>
       if (design.highResUrl) {
           window.open(design.highResUrl, '_blank');
       }
+  };
+
+  const handleIoTExport = (design: DesignAsset) => {
+      iotService.downloadConfig(design);
   };
 
   const handleContextualChat = async (design: DesignAsset) => {
@@ -255,6 +260,13 @@ export const BlueprintStore: React.FC<BlueprintStoreProps> = ({ onOpenChat }) =>
                                         className="flex-1 py-2 bg-neon-purple/20 border border-neon-purple/50 text-white rounded-lg font-bold text-xs hover:bg-neon-purple/30 transition-all flex items-center justify-center gap-1"
                                     >
                                         AR Twin
+                                    </button>
+                                    <button 
+                                        onClick={() => handleIoTExport(design)}
+                                        className="flex-1 py-2 bg-blue-500/20 border border-blue-500/50 text-blue-300 rounded-lg font-bold text-xs hover:bg-blue-500/30 transition-all flex items-center justify-center gap-1"
+                                        title="Export Smart Home Config"
+                                    >
+                                        IoT Export
                                     </button>
                                     <button 
                                         onClick={() => handleDownload(design)}

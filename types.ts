@@ -181,6 +181,15 @@ export interface NFTMetadata {
   royalty: number; // Percentage
 }
 
+// IoT & Smart Home (Phase 1.6)
+export interface IoTDeviceConfig {
+    id: string;
+    type: 'LIGHT' | 'SWITCH' | 'SENSOR' | 'THERMOSTAT' | 'OUTLET';
+    room: string;
+    coordinates: { x: number, y: number, z: number };
+    protocol: 'ZIGBEE' | 'ZWAVE' | 'WIFI' | 'MATTER';
+}
+
 // Vendor Portal Types
 export type VendorStatus = 'NOT_APPLIED' | 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -434,6 +443,7 @@ export interface ServiceRequest {
     bids: ServiceBid[];
     createdAt: number;
     milestones?: Milestone[]; // For high value contracts
+    liabilityWaiverSigned?: boolean; // Phase 6.5
 }
 
 // Staking Types
@@ -520,6 +530,16 @@ export interface EnterpriseProfile {
     // Phase 9.1 Multi-Sig
     multiSigEnabled: boolean;
     requiredSignatures: number;
+}
+
+// Privacy (Phase 9.5 - ZK Proofs)
+export interface ZKProof {
+    id: string;
+    proof: string; // Base64 encoded proof
+    publicSignals: string[];
+    verified: boolean;
+    timestamp: number;
+    type: 'SOLVENCY' | 'INVENTORY';
 }
 
 // RFQ Types (Phase 9.3)

@@ -11,7 +11,7 @@ interface ServiceVaultRecord {
     remainingBalance: number;
     providerId: string;
     clientId: string;
-    status: 'LOCKED' | 'RELEASED' | 'FROZEN' | 'REFUNDED' | 'PARTIALLY_RELEASED';
+    status: 'LOCKED' | 'RELEASED' | 'FROZEN' | 'REFUNDED' | 'PARTIALLY_RELEASED' | 'CONFISCATED';
     lockTime: number;
     milestones: Milestone[];
 }
@@ -141,6 +141,26 @@ export const serviceEscrowContract = {
         serviceVault.set(requestId, record);
 
         console.warn(`[ServiceEscrow] ⚠️ SOS PROTOCOL ACTIVATED: Funds Frozen for ${requestId}`);
+    },
+
+    /**
+     * ARBITRATION: Release to Treasury (Total Forfeiture)
+     * Used when a dispute results in a finding of fraud or severe breach by Provider.
+     * Funds are confiscated to the DAO Treasury (minus client refund if applicable).
+     */
+    releaseToTreasury: async (requestId: string, reason: string): Promise<void> => {
+        await new Promise(r => setTimeout(r, 1000));
+        const record = serviceVault.get(requestId);
+        if (!record) throw new Error("Record not found");
+
+        if (record.status !== 'FROZEN' && record.status !== 'LOCKED') throw new Error("Funds must be frozen/locked to confiscate");
+
+        const amount = record.remainingBalance;
+        record.remainingBalance = 0;
+        record.status = 'CONFISCATED';
+        serviceVault.set(requestId, record);
+
+        console.warn(`[ServiceEscrow] ⚖️ DISPUTE RULING: ${amount} Pi CONFISCATED to Treasury. Reason: ${reason}`);
     },
 
     getStatus: (requestId: string) => {

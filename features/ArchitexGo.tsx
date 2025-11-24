@@ -18,6 +18,9 @@ export const ArchitexGo: React.FC = () => {
     const [location, setLocation] = useState('Current Location (Mock)');
     const [loading, setLoading] = useState(false);
     
+    // Liability Waiver State
+    const [waiverAccepted, setWaiverAccepted] = useState(false);
+    
     // Offline State
     const [isOffline, setIsOffline] = useState(!offlineService.isOnline());
 
@@ -59,6 +62,10 @@ export const ArchitexGo: React.FC = () => {
 
     const handleRequest = async () => {
         if (!category || !desc) return;
+        if (!waiverAccepted) {
+            alert("You must accept the Service Liability Waiver.");
+            return;
+        }
         if (isOffline) {
             alert("Cannot create new requests while offline. Please reconnect.");
             return;
@@ -230,10 +237,26 @@ export const ArchitexGo: React.FC = () => {
                                 placeholder="Describe the issue (e.g., Leaking pipe under sink, urgent)"
                                 className="w-full bg-black/40 border border-white/10 rounded p-3 text-white focus:border-neon-purple outline-none h-24 mb-4"
                             />
+
+                            {/* Phase 6.5: Service Liability Waiver */}
+                            <div className="bg-red-500/10 border border-red-500/30 rounded p-3 mb-4">
+                                <label className="flex items-start gap-3 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={waiverAccepted}
+                                        onChange={e => setWaiverAccepted(e.target.checked)}
+                                        className="mt-1 accent-red-500"
+                                    />
+                                    <span className="text-xs text-gray-300 leading-tight">
+                                        <strong className="text-red-400 block mb-1">Service Liability Waiver</strong>
+                                        I agree that Architex is a connector venue only. I release Architex from all liability regarding damage, theft, or injury caused by independent providers.
+                                    </span>
+                                </label>
+                            </div>
                             
                             <button 
                                 onClick={handleRequest}
-                                disabled={!category || !desc || loading}
+                                disabled={!category || !desc || loading || !waiverAccepted}
                                 className="w-full py-3 bg-gradient-to-r from-neon-cyan to-blue-600 text-white font-bold rounded-lg hover:shadow-lg disabled:opacity-50 transition-all"
                             >
                                 {loading ? 'Broadcasting...' : 'Find Technicians'}
